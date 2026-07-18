@@ -1,0 +1,47 @@
+# ci.yml — Intégration continue (CODING.md §13 & §15).
+#
+# Deux gardes bloquants sur chaque push / pull request :
+#   - style : `ruff check` + `ruff format --check` (PEP 8) ;
+#   - tests : la suite RAPIDE `pytest -m "not slow"`.
+#
+# Les tests `slow` (qui appellent Ollama) ne tournent PAS en CI : aucun runner
+# GitHub n'a de GPU ni de modèles locaux. Ils se lancent en local via `pytest -m slow`.
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  qualite:
+    runs-on: ubuntu-latest
+    steps:
+      # Récupère le code.
+      - uses: actions/checkout@v4
+
+      # Installe Python 3.11 (>=3.10 requis par le projet).
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Installe uniquement le nécessaire à la suite rapide : le cœur + les
+      # outils de test. On évite langchain/vanna/deepeval (lourds) : les modules
+      # concernés se dégradent proprement s'ils sont absents.
+      - name: Installer les dépendances (cœur + tests)
+        run: |
+          python -m pip install --upgrade pip
+          pip install faker requests fastapi "uvicorn[standard]" pydantic \
+                      pytest pytest-cov ruff httpx
+
+      # Garde style : PEP 8 + format. Bloque le merge en cas d'écart.
+      - name: Ruff (lint + format)
+        run: |
+          ruff check backend eval tests
+          ruff format --check backend eval tests
+
+      # Construit la base déterministe puis lance la suite rapide avec couverture.
+      - name: Tests rapides
+        run: |
+          python -m backend.build_db
+          pytest -q -m "not slow" --cov=backend --cov=eval

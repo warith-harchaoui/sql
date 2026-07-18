@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<!--
+  index.html — Front de la démo Text2SQL (Institut de Cancérologie).
+
+  Style « maison » du skill front-ui : trois Roboto (sans / serif / mono),
+  Tailwind (vendored, donc 100 % local), mode sombre par classe, focus rings
+  visibles, garde `motion-reduce`. Objectif PÉDAGOGIQUE : montrer à des
+  collègues *comment* on fait du text2sql — donc on affiche toujours le SQL
+  généré, la sortie brute du modèle, la latence et une note par approche.
+
+  Le rendu des figures utilise Vega-Lite (vega-embed) : Gemma choisit la visu,
+  le back renvoie une spec Vega-Lite, le navigateur la rend.
+-->
+<html lang="fr" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Text2SQL — Institut de Cancérologie</title>
+  <!-- Favicon SVG inline (ruban cancéro) : évite une requête 404 vers favicon.ico. -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23007AFF'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='white'%3E%E2%89%8B%3C/text%3E%3C/svg%3E" />
+
+  <!-- Tailwind vendored (local, pas de CDN) : config dark-mode par classe. -->
+  <script>
+    // On déclare la config AVANT de charger Tailwind pour qu'il la prenne.
+    window.tailwind = window.tailwind || {};
+    window.tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          fontFamily: {
+            // Trois Roboto : la règle typographique par défaut de front-ui.
+            sans: ["Roboto", "system-ui", "sans-serif"],
+            serif: ["'Roboto Serif'", "Georgia", "serif"],
+            mono: ["'Roboto Mono'", "ui-monospace", "monospace"],
+          },
+          colors: {
+            // Bleu « Apple » assombri pour l'accessibilité : #0063cc donne un
+            // contraste ≥ 4.5:1 avec du texte blanc (WCAG AA « normal »), ce que
+            // l'#007AFF d'origine ne garantissait pas sur du texte 14px.
+            // ``dark`` est encore plus foncé pour l'état survol.
+            brand: { DEFAULT: "#0063cc", dark: "#00509e" },
+          },
+        },
+      },
+    };
+  </script>
+  <script src="/static/vendor/tailwindcss.js"></script>
+
+  <!-- Trois Roboto via Google Fonts (dégradation propre si hors-ligne). -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&family=Roboto+Serif:opsz,wght@8..144,400;8..144,600&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Vega / Vega-Lite / vega-embed pour le rendu des figures Gemma. -->
+  <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+
+  <style>
+    /* Petit rendu « bloc de code » lisible pour le SQL généré. */
+    .sql-code { white-space: pre-wrap; word-break: break-word; }
+  </style>
+</head>
+
+<body class="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 font-sans antialiased">
+  <!-- ================= En-tête ================= -->
+  <header class="border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur sticky top-0 z-20">
+    <div class="mx-auto max-w-7xl px-4 py-3 flex items-center gap-4">
+      <div class="flex items-center gap-3">
+        <!-- Logo minimal : un « ruban » stylisé (symbole cancéro). -->
+        <div class="h-9 w-9 rounded-xl bg-brand text-white grid place-items-center font-bold" aria-hidden="true">≋</div>
+        <div>
+          <h1 class="text-lg font-bold leading-tight">Text2SQL — Institut de Cancérologie</h1>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            Langage naturel → SQL, trois approches, 100 % local (Ollama)
+          </p>
+        </div>
+      </div>
+
+      <div class="ml-auto flex items-center gap-2">
+        <!-- Badges d'état, remplis par app.js au chargement (/api/health). -->
+        <div id="health-badges" class="hidden sm:flex items-center gap-2 text-xs"></div>
+        <!-- Bascule mode sombre. -->
+        <button id="theme-toggle"
+                class="rounded-lg px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-brand"
+                aria-label="Basculer le thème clair/sombre">🌓</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-7xl px-4 py-6 grid gap-6 lg:grid-cols-[1fr_20rem]">
+    <!-- ================= Colonne principale ================= -->
+    <section class="space-y-6">
+      <!-- --- Zone de saisie de la question --- -->
+      <div class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
+        <label for="question" class="block text-sm font-medium mb-2">
+          Pose ta question en français
+        </label>
+        <textarea id="question" rows="2"
+                  class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-950 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+                  placeholder="Ex. : Chiffre d'affaires encaissé par mois en 2026"></textarea>
+
+        <div class="mt-3 flex flex-wrap items-center gap-3">
+          <!-- Sélecteur d'approche (segmented control). -->
+          <div class="inline-flex rounded-xl border border-gray-300 dark:border-gray-700 overflow-hidden text-sm" role="group" aria-label="Choix de l'approche">
+            <button data-approach="qwen" aria-pressed="true" class="approach-btn px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand">QwenCoder</button>
+            <button data-approach="langchain" aria-pressed="false" class="approach-btn px-3 py-2 border-l border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand">LangChain</button>
+            <button data-approach="vanna" aria-pressed="false" class="approach-btn px-3 py-2 border-l border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand">Vanna</button>
+            <button data-approach="toutes" aria-pressed="false" class="approach-btn px-3 py-2 border-l border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand">Toutes</button>
+          </div>
+
+          <button id="run-btn"
+                  class="ml-auto inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-brand disabled:opacity-50">
+            <span>Exécuter</span>
+            <span id="run-spinner" aria-hidden="true" class="hidden animate-spin motion-reduce:animate-none">⏳</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- --- Questions d'exemple (chips par domaine), remplies par app.js --- -->
+      <div class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
+        <h2 class="text-sm font-medium mb-3">Exemples à cliquer</h2>
+        <div id="samples" class="flex flex-wrap gap-2"></div>
+      </div>
+
+      <!-- --- Résultats (un bloc par approche), remplis par app.js ---
+           aria-live="polite" : les lecteurs d'écran annoncent l'arrivée des
+           résultats sans voler le focus. aria-busy passe à true pendant le calcul. -->
+      <div id="results" class="space-y-6" aria-live="polite" aria-busy="false"></div>
+    </section>
+
+    <!-- ================= Colonne latérale : pédagogie + schéma ================= -->
+    <aside class="space-y-6">
+      <!-- Explication des approches : le « comment on fait ». -->
+      <div class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
+        <h2 class="text-sm font-bold mb-3">Comment ça marche&nbsp;?</h2>
+        <ul class="space-y-3 text-xs text-gray-600 dark:text-gray-300">
+          <li><span class="font-semibold text-gray-900 dark:text-gray-100">QwenCoder (brut)</span> —
+            on colle le schéma + la question dans un prompt maison et on appelle
+            <code>qwen2.5-coder</code>. Zéro framework : tout est visible.</li>
+          <li><span class="font-semibold text-gray-900 dark:text-gray-100">LangChain</span> —
+            <code>create_sql_query_chain</code> introspecte la base et prompte le
+            LLM pour toi. Concis, mais plus « boîte noire ».</li>
+          <li><span class="font-semibold text-gray-900 dark:text-gray-100">Vanna (RAG)</span> —
+            on « entraîne » un index (schéma + savoir métier + exemples) ; à
+            l'exécution, seul le contexte pertinent est récupéré. Idéal gros schéma.</li>
+          <li><span class="font-semibold text-gray-900 dark:text-gray-100">Figures</span> —
+            <code>gemma4</code> choisit la visualisation ; on la rend en
+            Vega-Lite. On n'exécute jamais de code produit par un LLM.</li>
+        </ul>
+        <p class="mt-3 text-[11px] text-gray-500 dark:text-gray-400">
+          Exécution SQL en lecture seule stricte (SELECT unique, base ouverte en
+          <code>mode=ro</code>). Voir <code>PROS_CONS.md</code>.
+        </p>
+      </div>
+
+      <!-- Explorateur de schéma (repliable). -->
+      <div class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
+        <details>
+          <summary class="cursor-pointer text-sm font-bold">Schéma de la base (<span id="table-count">…</span> tables)</summary>
+          <pre id="schema-ddl" class="mt-3 max-h-96 overflow-auto text-[11px] leading-relaxed text-gray-600 dark:text-gray-300 sql-code"></pre>
+        </details>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="mx-auto max-w-7xl px-4 py-8 text-center text-xs text-gray-500 dark:text-gray-400">
+    Démo pédagogique — données 100 % fictives. Aucune donnée ne quitte la machine.
+  </footer>
+
+  <!-- Le code applicatif, en module ES. -->
+  <script type="module" src="/static/app.js"></script>
+</body>
+</html>

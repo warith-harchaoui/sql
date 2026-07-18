@@ -1,0 +1,32 @@
+# --- Config réelle : on garde les *.example, on ignore le reste (CODING.md §9) ---
+.env
+*.env
+!.env.example
+*config.json
+!*config.json.example
+
+# --- Base et artefacts générés ---
+data/institut.db
+data/vanna_chroma/
+*.sqlite
+*.db-journal
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.deepeval/
+
+# --- Environnements virtuels ---
+.venv/
+venv/
+env/
+
+# --- OS / éditeurs ---
+.DS_Store
+.idea/
+.vscode/

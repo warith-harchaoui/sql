@@ -1,0 +1,30 @@
+# requirements.txt — dépendances de la démo text2sql.
+#
+# Cœur (obligatoire) : génère la base, sert l'API, exécute l'approche QwenCoder
+# brute + les figures Gemma. C'est le minimum pour une démo fonctionnelle.
+faker>=30.0            # génération de données synthétiques françaises réalistes
+requests>=2.31         # client HTTP synchrone vers Ollama
+fastapi>=0.110         # API web
+uvicorn[standard]>=0.29  # serveur ASGI pour lancer FastAPI
+pydantic>=2.6          # modèles de requête/réponse de l'API
+
+# Approche 1 — LangChain (« toolbox connue »). Optionnel : sans ces paquets,
+# l'approche se déclare simplement indisponible dans le front.
+langchain>=0.2
+langchain-community>=0.2
+langchain-ollama>=0.1
+sqlalchemy>=2.0        # requis par SQLDatabase de LangChain
+
+# Approche 3 — Vanna AI (RAG). Optionnel de même. ChromaDB = store vectoriel.
+vanna>=0.6
+chromadb>=0.5
+
+# Éval IA (CODING.md §14). Optionnels : la suite d'éval se skippe proprement
+# s'ils ne sont pas installés.
+deepeval>=1.0          # exactitude d'exécution du SQL (métrique custom)
+giskard>=2.14          # scan de robustesse
+
+# Outillage dev/tests.
+pytest>=8.0
+pytest-cov>=5.0
+ruff>=0.5

@@ -1,0 +1,49 @@
+# pyproject.toml — configuration outillage (Ruff/PEP8, pytest).
+#
+# On suit CODING.md §15 : Ruff applique PEP 8 en CI (`ruff check` + `ruff
+# format --check`). La longueur de ligne est FIXÉE ici (une seule valeur, écrite
+# noir sur blanc) : 100 caractères — un compromis lisibilité/verbosité pour un
+# code très commenté et des chaînes SQL parfois longues.
+
+[project]
+name = "text2sql-institut-cancero"
+version = "1.0.0"
+description = "Démo pédagogique text2sql (3 approches) sur une base d'institut de cancérologie, 100 % locale via Ollama."
+requires-python = ">=3.10"
+license = { text = "MIT" }
+
+[tool.ruff]
+# Longueur de ligne unique et pinnée (cf. CODING.md §15).
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+# E/W = pycodestyle (PEP 8), F = pyflakes, I = isort, D = pydocstyle,
+# UP = pyupgrade, B = bugbear. On veut un code propre ET documenté.
+select = ["E", "W", "F", "I", "D", "UP", "B"]
+# D203/D213 entrent en conflit avec le style numpy ; on suit la convention numpy.
+# D401 (imperative mood) est une heuristique anglocentrée : nos docstrings sont
+# en français (3e personne, « Génère… », « Transforme… »), on la désactive donc.
+ignore = ["D203", "D213", "D401"]
+
+[tool.ruff.lint.pydocstyle]
+# Docstrings au format numpy (cf. CODING.md §1).
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+# Les tests peuvent se passer de docstrings d'assertion exhaustives.
+"tests/*" = ["D100", "D103"]
+
+[tool.pytest.ini_options]
+# Suite rapide par défaut ; les tests lents (qui appellent Ollama) sont marqués.
+testpaths = ["tests"]
+markers = [
+    "slow: tests d'intégration lents (appellent Ollama / les modèles locaux)",
+]
+# On tait l'avertissement de fin de vie de langchain-community : c'est un import
+# de compatibilité volontaire (cf. langchain_sql.py), pas un bug de notre code.
+# (Catégorie omise : la classe réelle est une sous-classe propre à LangChain, on
+# filtre donc par message pour couvrir toutes ses variantes.)
+filterwarnings = [
+    "ignore:.*langchain-community.*is being sunset.*",
+]
