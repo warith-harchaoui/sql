@@ -125,18 +125,16 @@ def robustness_score(approach, subset: int | None = 4) -> RobustnessReport:
     stable = 0
     total = 0
     for case in cases:
-        # Résultat de référence = celui de la question d'origine générée.
-        base = approach.generate(case.question)
-        # On compare chaque variante au SQL de RÉFÉRENCE du cas (vérité terrain) :
-        # ainsi une approche déjà fausse à l'origine ne « gagne » pas en stabilité.
+        # On compare chaque variante perturbée au SQL de RÉFÉRENCE du cas (vérité
+        # terrain) : ainsi une approche déjà fausse à l'origine ne « gagne » pas en
+        # stabilité (on ne compare pas la variante à une origine elle-même fausse).
         for variant in perturb(case.question):
             gen = approach.generate(variant)
             verdict = evaluate_sql(gen.sql, case.sql_ref, ordered=case.ordered)
             total += 1
             if verdict.match:
                 stable += 1
-        # ``base`` est calculé pour la traçabilité ; on log le SQL d'origine.
-        logger.debug("Cas %s — SQL origine : %s", case.id, base.sql)
+            logger.debug("Cas %s — variante : %s", case.id, gen.sql)
 
     score = stable / total if total else 0.0
     return RobustnessReport(score=score, stable=stable, total=total)

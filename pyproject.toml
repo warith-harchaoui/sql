@@ -6,9 +6,9 @@
 # code très commenté et des chaînes SQL parfois longues.
 
 [project]
-name = "text2sql-institut-cancero"
-version = "1.0.0"
-description = "Démo pédagogique text2sql (3 approches) sur une base d'institut de cancérologie, 100 % locale via Ollama."
+name = "text2sql-hopital"
+version = "1.1.0"
+description = "Démo pédagogique text2sql (3 approches) sur une base d'hôpital fictif, 100 % locale via Ollama."
 requires-python = ">=3.10"
 license = { text = "MIT" }
 

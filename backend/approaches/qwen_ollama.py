@@ -32,6 +32,11 @@ Règles STRICTES :
 - Limite à 200 lignes maximum sauf si la question demande explicitement tout.
 """
 
+# Consigne système « naïve » : volontairement minimale, pour la démonstration
+# « un bon prompt, ça joue ». Aucune règle, aucun cadrage : c'est le point de
+# départ paresseux qu'on compare au prompt soigné ci-dessus.
+NAIVE_SYSTEM = "Écris une requête SQL qui répond à la question. Réponds par le SQL."
+
 
 class QwenOllamaApproach:
     """Génère du SQL par prompt direct sur ``qwen2.5-coder`` via Ollama.
@@ -49,9 +54,13 @@ class QwenOllamaApproach:
         Si vrai, valide le SQL généré en l'exécutant (lecture seule) et, en cas
         d'erreur SQL, effectue UN réessai en renvoyant l'erreur au modèle
         (« execution feedback », bonne pratique de l'état de l'art).
+    naive : bool
+        Si vrai, adopte le prompt « paresseux » (schéma NU sans valeurs énumérées
+        ni exemples, consigne minimale, pas d'auto-correction). Sert de témoin
+        pour démontrer qu'un **bon prompt** change les résultats.
     """
 
-    name: str = "QwenCoder (Ollama, brut)"
+    name: str = "QwenCoder (brut)"
 
     def __init__(
         self,
@@ -59,6 +68,7 @@ class QwenOllamaApproach:
         model: str = MODEL_SQL,
         sample_rows: int = 2,
         self_correct: bool = True,
+        naive: bool = False,
     ) -> None:
         """Initialise l'approche et pré-calcule le schéma injecté au prompt."""
         # Sans serveur Ollama, cette approche ne peut rien faire : on échoue tôt
@@ -69,11 +79,18 @@ class QwenOllamaApproach:
             )
         self.model = model
         self.db_path = db_path or db.DB_PATH
-        self.self_correct = self_correct
-        # Le schéma inclut les VALEURS énumérées (with_categories) : c'est le
-        # meilleur rempart contre les erreurs sémantiques (filtrer sur la bonne
-        # valeur, ex. statut = 'Impayée' et non 'En attente'). Stable → calculé une fois.
-        self.schema = db.schema_ddl(self.db_path, sample_rows=sample_rows, with_categories=True)
+        self.naive = naive
+        # En mode naïf : pas d'auto-correction, schéma NU (ni valeurs, ni exemples),
+        # nom distinct. Sinon : le « bon prompt » avec valeurs énumérées + exemples.
+        if naive:
+            self.self_correct = False
+            self.name = "QwenCoder (prompt naïf)"
+            self.schema = db.schema_ddl(self.db_path, sample_rows=0, with_categories=False)
+        else:
+            self.self_correct = self_correct
+            # Les VALEURS énumérées (with_categories) sont le meilleur rempart contre
+            # les erreurs sémantiques (filtrer sur 'Impayée' et non 'En attente').
+            self.schema = db.schema_ddl(self.db_path, sample_rows=sample_rows, with_categories=True)
 
     @classmethod
     def available(cls) -> bool:
@@ -100,8 +117,10 @@ class QwenOllamaApproach:
             f"Question : {question}\n\n"
             "Requête SQL SQLite (SELECT uniquement) :"
         )
+        # Le prompt naïf utilise la consigne minimale ; le bon prompt, la stricte.
+        system = NAIVE_SYSTEM if self.naive else SYSTEM_PROMPT
         return [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": system},
             {"role": "user", "content": user},
         ]
 
@@ -138,7 +157,9 @@ class QwenOllamaApproach:
         sql = clean_sql(result.content)
         raw = result.content
         note = (
-            "Prompt maison (schéma + valeurs énumérées) → qwen2.5-coder via Ollama. "
+            "Prompt NAÏF (schéma nu, aucune consigne) → qwen2.5-coder. Témoin de comparaison."
+            if self.naive
+            else "Prompt maison (schéma + valeurs énumérées) → qwen2.5-coder via Ollama. "
             "L'approche la plus transparente : tout est visible."
         )
         # Cumul des temps de calcul mesurés PAR OLLAMA (insensibles à la charge

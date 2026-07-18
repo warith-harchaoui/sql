@@ -200,7 +200,7 @@ faciles ne prouve rien ; le `--hard` montre où un modèle local craque vraiment
 
 📊 **Étude numérique complète** — latence, vitesse et exactitude des trois
 approches sur 46 requêtes réalistes, avec un violin de la distribution de latence
-et le temps de calcul mesuré par Ollama : **[`BENCHMARK.md`](BENCHMARK.md)**
+et le temps de calcul mesuré par Ollama : **[`BENCHMARK.fr.md`](BENCHMARK.fr.md)**
 (`python -m eval.benchmark && python -m eval.bench_charts`).
 
 ---

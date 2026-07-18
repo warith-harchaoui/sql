@@ -40,14 +40,6 @@ def test_looks_temporal_detects_iso_dates():
     assert figures._looks_temporal(["Sein", "Poumon", "Côlon"]) is False
 
 
-def test_is_numeric_distinguishes_numbers_from_text():
-    """L'heuristique numérique sépare colonnes de nombres et de chaînes."""
-    assert figures._is_numeric([1, 2, 3]) is True
-    assert figures._is_numeric(["a", "b"]) is False
-    # Les booléens ne doivent pas être pris pour des mesures numériques.
-    assert figures._is_numeric([True, False]) is False
-
-
 def test_build_vega_bar_spec_is_house_style():
     """La spec Vega-Lite d'un bar chart porte le house style (config + palette)."""
     # Choix simulé de Gemma : un bar chart localisation -> nombre.

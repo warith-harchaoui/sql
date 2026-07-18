@@ -1,6 +1,6 @@
 # Examples — Text2SQL demo cookbook
 
-Runnable recipes for the cancer-institute text2sql demo. All commands assume the
+Runnable recipes for the hospital text2sql demo. All commands assume the
 repository root as the working directory, a running `ollama serve`, and
 `pip install -r requirements.txt` done. See [`README.md`](README.md) for setup and
 [`PROS_CONS.md`](PROS_CONS.md) for the approach comparison.

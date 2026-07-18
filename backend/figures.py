@@ -164,26 +164,6 @@ def _looks_temporal(values: list) -> bool:
     return hits >= max(1, int(0.6 * len(sample)))
 
 
-def _is_numeric(values: list) -> bool:
-    """Vrai si toutes les valeurs non nulles sont numériques.
-
-    Parameters
-    ----------
-    values : list
-        Échantillon de valeurs de la colonne.
-
-    Returns
-    -------
-    bool
-        Vrai si la colonne est entièrement numérique (hors None).
-    """
-    sample = [v for v in values if v is not None][:20]
-    if not sample:
-        return False
-    # bool est un int en Python : on l'exclut pour ne pas confondre 0/1 booléens.
-    return all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in sample)
-
-
 def _records(columns: list[str], rows: list[list]) -> list[dict]:
     """Transforme colonnes + lignes en une liste de dicts (format Vega ``values``).
 

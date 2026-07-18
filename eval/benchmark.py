@@ -28,14 +28,19 @@ from backend.approaches.langchain_sql import LangChainApproach
 from backend.approaches.qwen_ollama import QwenOllamaApproach
 from backend.approaches.vanna_rag import VannaApproach
 
-from .benchmark_set import BENCH
+from .benchmark_set import large_bench
 from .execution_match import evaluate_sql
 
 logger = logging.getLogger(__name__)
 
-# Fabriques d'approches par clé + libellé lisible pour les rapports/figures.
-_APPROACHES: dict[str, tuple[type, str]] = {
-    "qwen": (QwenOllamaApproach, "QwenCoder (brut)"),
+# Fabriques d'approches par clé + libellé lisible. IMPORTANT : les quatre
+# configs partagent le MÊME LLM (`qwen2.5-coder`) — on compare les *approches*
+# (contexte/stratégie), pas des modèles différents. ``qwen`` (bon prompt) et
+# ``qwen_naive`` (schéma nu, sans valeurs ni auto-correction) servent à montrer
+# qu'un bon prompt change tout.
+_APPROACHES: dict[str, tuple] = {
+    "qwen": (QwenOllamaApproach, "QwenCoder (bon prompt)"),
+    "qwen_naive": (lambda: QwenOllamaApproach(naive=True), "QwenCoder (prompt naïf)"),
     "langchain": (LangChainApproach, "LangChain"),
     "vanna": (VannaApproach, "Vanna (RAG)"),
 }
@@ -76,19 +81,22 @@ def _percentile(values: list[float], pct: float) -> float:
     return ordered[low] * (1 - frac) + ordered[high] * frac
 
 
-def run_one_approach(key: str, repeats: int = 3) -> dict:
-    """Fait tourner une approche sur tout ``BENCH`` et collecte les mesures.
+def run_one_approach(key: str, dataset: list, repeats: int = 3) -> dict:
+    """Fait tourner une approche sur ``dataset`` et collecte les mesures.
 
     Chaque requête est générée ``repeats`` fois ; on garde le **minimum** de
     latence horloge murale. Justification : le bruit (autres activités de la
     machine) ne fait qu'*ajouter* du temps, donc le minimum observé approche la
     latence « propre », débruitée. On capte aussi le temps mesuré PAR OLLAMA
-    (``server_s``) et la vitesse ``tokens_per_s`` quand l'approche les expose.
+    (``server_s``) et la vitesse ``tokens_per_s`` quand l'approche les expose, et
+    on archive le SQL généré + le type d'échec pour l'analyse d'erreurs.
 
     Parameters
     ----------
     key : str
-        Clé d'approche (``qwen`` / ``langchain`` / ``vanna``).
+        Clé d'approche (``qwen`` / ``qwen_naive`` / ``langchain`` / ``vanna``).
+    dataset : list
+        Les cas (``GoldenCase``) à évaluer.
     repeats : int
         Nombre de répétitions par requête (on garde le min de latence).
 
@@ -108,7 +116,7 @@ def run_one_approach(key: str, repeats: int = 3) -> dict:
     records: list[dict] = []
     # On déroule chaque cas : on répète la génération, on garde le min de latence,
     # puis on compare l'exécution du SQL généré à celle de la référence.
-    for i, case in enumerate(BENCH, 1):
+    for i, case in enumerate(dataset, 1):
         walls: list[float] = []
         server_times: list[float] = []
         tps_values: list[float] = []
@@ -126,6 +134,15 @@ def run_one_approach(key: str, repeats: int = 3) -> dict:
         # Le SQL est déterministe (température 0) : le verdict est stable ; on
         # évalue la dernière génération.
         verdict = evaluate_sql(gen.sql, case.sql_ref, ordered=case.ordered)
+        # Type d'échec pour l'analyse : « ok », « exec » (SQL invalide) ou
+        # « semantique » (SQL valide mais mauvais résultat — l'erreur silencieuse).
+        exec_ok = verdict.gen_rows != -1
+        if verdict.match:
+            err_type = "ok"
+        elif exec_ok:
+            err_type = "semantique"
+        else:
+            err_type = "exec"
         records.append(
             {
                 "id": case.id,
@@ -137,8 +154,11 @@ def run_one_approach(key: str, repeats: int = 3) -> dict:
                 "server_s": round(min(server_times), 4) if server_times else None,
                 "tokens_per_s": round(max(tps_values), 1) if tps_values else None,
                 "gen_ok": gen.ok,
-                "exec_ok": verdict.gen_rows != -1,
+                "exec_ok": exec_ok,
                 "match": verdict.match,
+                "err_type": err_type,
+                # SQL généré (tronqué) : sert d'exemple dans l'analyse d'erreurs.
+                "sql": gen.sql[:300],
             }
         )
         # Trace de progression : utile car la campagne complète est longue.
@@ -146,7 +166,7 @@ def run_one_approach(key: str, repeats: int = 3) -> dict:
             "[%s] %d/%d %s  min %.2fs  %s",
             key,
             i,
-            len(BENCH),
+            len(dataset),
             case.id,
             min(walls),
             "✓" if verdict.match else "✗",
@@ -192,12 +212,20 @@ def summarize(result: dict) -> dict:
     server_times = [r["server_s"] for r in records if r.get("server_s")]
     tps = [r["tokens_per_s"] for r in records if r.get("tokens_per_s")]
 
+    # Anatomie des échecs : erreurs d'exécution (SQL invalide) vs erreurs
+    # sémantiques (SQL valide, mauvais résultat — l'« erreur silencieuse »).
+    errors = {
+        "exec": sum(1 for r in records if r.get("err_type") == "exec"),
+        "semantique": sum(1 for r in records if r.get("err_type") == "semantique"),
+    }
+
     summary = {
         "key": result["key"],
         "label": result["label"],
         "n": len(records),
         "accuracy": sum(matches) / len(matches),
         "accuracy_by_difficulty": by_diff,
+        "errors": errors,
         "latency_mean": statistics.mean(latencies),
         "latency_median": statistics.median(latencies),
         "latency_p95": _percentile(latencies, 95),
@@ -233,16 +261,20 @@ def run_benchmark(keys: list[str], out_path: Path = DEFAULT_OUT, repeats: int = 
     """
     approaches_raw: list[dict] = []
     summaries: list[dict] = []
+    # Le grand jeu (~500) est construit UNE fois et partagé par toutes les
+    # approches — comparaison à jeu identique.
+    dataset = large_bench()
+    logger.info("Jeu : %d requêtes", len(dataset))
     # Séquentiel : on veut des latences propres, pas de contention GPU/CPU.
     for key in keys:
         logger.info("=== Approche %s (repeats=%d) ===", key, repeats)
-        res = run_one_approach(key, repeats=repeats)
+        res = run_one_approach(key, dataset, repeats=repeats)
         approaches_raw.append(res)
         if res["available"]:
             summaries.append(summarize(res))
 
     report = {
-        "n_cases": len(BENCH),
+        "n_cases": len(dataset),
         "repeats": repeats,
         "approaches": approaches_raw,
         "summaries": summaries,

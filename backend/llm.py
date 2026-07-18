@@ -146,6 +146,43 @@ def chat(
         )
 
 
+def detect_language(text: str) -> str:
+    """Devine la langue d'une question via ``langdetect`` (repli « und » si absent).
+
+    Sert à afficher la langue détectée dans le front (pédagogie) et pourrait
+    servir à adapter le prompt. Déterministe grâce à ``DetectorFactory.seed``.
+
+    Parameters
+    ----------
+    text : str
+        La question en langage naturel.
+
+    Returns
+    -------
+    str
+        Code ISO 639-1 (ex. ``fr``, ``en``) ; ``und`` si indéterminé ou si
+        ``langdetect`` n'est pas installé.
+
+    Examples
+    --------
+    >>> detect_language("Combien de patients ?") in ("fr", "und")
+    True
+    """
+    text = (text or "").strip()
+    # Trop court pour être fiable : on ne devine pas.
+    if len(text) < 3:
+        return "und"
+    try:
+        from langdetect import DetectorFactory, detect
+
+        # Graine fixe → détection reproductible (langdetect est stochastique).
+        DetectorFactory.seed = 0
+        return detect(text)
+    except Exception:
+        # Paquet absent ou détection impossible : on ne bloque jamais l'appel.
+        return "und"
+
+
 def is_up() -> bool:
     """Vrai si le serveur Ollama répond sur `/api/tags`."""
     try:

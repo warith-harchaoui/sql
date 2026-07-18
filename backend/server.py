@@ -30,7 +30,7 @@ from .approaches.base import ApproachUnavailable, SQLGeneration
 from .approaches.langchain_sql import LangChainApproach
 from .approaches.qwen_ollama import QwenOllamaApproach
 from .approaches.vanna_rag import VannaApproach
-from .llm import MODEL_FIGURE, MODEL_SQL, is_up, list_models
+from .llm import MODEL_FIGURE, MODEL_SQL, detect_language, is_up, list_models
 
 logger = logging.getLogger(__name__)
 
@@ -227,12 +227,13 @@ def health() -> dict:
 
 @app.get("/api/schema")
 def schema() -> dict:
-    """Schéma de la base : liste des tables + DDL complet (pour l'affichage)."""
-    # Le front montre ce contexte pour expliquer le « comment » : c'est ce même
-    # schéma que reçoivent les modèles.
+    """Schéma de la base : liste des tables + DDL enrichi (pour l'affichage)."""
+    # On montre le DDL AVEC les valeurs énumérées (with_categories) : c'est
+    # exactement le contexte enrichi que reçoit le « bon prompt » et qui fait la
+    # différence d'exactitude mesurée. Le collègue voit donc ce qui compte.
     return {
         "tables": db.list_tables(),
-        "ddl": db.schema_ddl(sample_rows=0),
+        "ddl": db.schema_ddl(sample_rows=0, with_categories=True),
     }
 
 
@@ -261,7 +262,13 @@ def query(request: QueryRequest) -> dict:
     # une seule. On filtre les clés inconnues en amont.
     keys = list(APPROACHES) if request.approach == "toutes" else [request.approach]
     results = [_run_one(k, request) for k in keys]
-    return {"question": request.question, "results": results}
+    # Langue détectée de la question (langdetect) : affichée par le front, pour
+    # montrer qu'on sait d'où on part (fr/en) — le modèle gère les deux.
+    return {
+        "question": request.question,
+        "detected_lang": detect_language(request.question),
+        "results": results,
+    }
 
 
 @app.post("/api/figure")

@@ -291,7 +291,147 @@ def _tag(cases: list[GoldenCase], niveau: str) -> list[GoldenCase]:
     return [dataclasses.replace(c, difficulte=niveau) for c in cases]
 
 
-# Le grand jeu, ordonné du plus simple au plus dur (progression pédagogique).
+# Le grand jeu curaté, ordonné du plus simple au plus dur (progression pédagogique).
 BENCH: list[GoldenCase] = (
     _tag(GOLDEN, "facile") + MEDIUM + _tag(GOLDEN_HARD, "difficile") + HARD_EXTRA
 )
+
+
+def _generate_templated(target: int = 254) -> list[GoldenCase]:
+    """Génère un grand lot de cas templatés, dont le SQL de référence est correct par construction.
+
+    On introspecte la base et on décline quelques patrons SÛRS (comptages,
+    regroupements, agrégats, filtres par valeur) sur les tables et colonnes
+    réelles. Le SQL de référence est donc trivialement correct — ce qui permet
+    d'atteindre un gros volume (~300 avec le jeu curaté) sans écrire 254 requêtes
+    à la main. C'est le modèle génératif qui sera jugé dessus.
+
+    Parameters
+    ----------
+    target : int
+        Nombre de cas visé (on s'arrête une fois atteint).
+
+    Returns
+    -------
+    list[GoldenCase]
+        Les cas générés (identifiants ``gen-XXX``).
+
+    Notes
+    -----
+    Import de ``backend.db`` fait ici (pas au niveau module) pour que l'import de
+    ce module ne déclenche aucune requête tant que la base n'est pas construite.
+    """
+    from backend import db
+
+    cases: list[GoldenCase] = []
+    cats = db.categorical_values(max_distinct=15)  # {table: {col: [valeurs]}}
+    i = 0
+
+    def add(dom: str, q: str, sql: str, diff: str) -> None:
+        """Ajoute un cas généré avec un identifiant séquentiel."""
+        nonlocal i
+        cases.append(GoldenCase(f"gen-{i:03d}", dom, q, sql, difficulte=diff))
+        i += 1
+
+    for t in db.list_tables():
+        if len(cases) >= target:
+            break
+        schema = db.table_schema(t)
+        # Colonnes numériques « mesurables » : entiers/réels, ni clé, ni identifiant.
+        numeric = [
+            c["name"]
+            for c in schema["columns"]
+            if c["type"].upper() in ("INTEGER", "REAL")
+            and not c["pk"]
+            and not c["name"].endswith("_id")
+        ]
+        catcols = list(cats.get(t, {}).keys())
+
+        # Patron 1 — comptage total de la table (facile).
+        add(
+            t,
+            f"Combien de lignes contient la table {t} ?",
+            f"SELECT COUNT(*) AS n FROM {t}",
+            "facile",
+        )
+        # Patron 6 — top 5 des plus grandes valeurs d'une colonne numérique (moyen).
+        for numcol in numeric[:2]:
+            add(
+                t,
+                f"Les 5 plus grandes valeurs de {numcol} dans {t}.",
+                f"SELECT {numcol} FROM {t} ORDER BY {numcol} DESC LIMIT 5",
+                "moyen",
+            )
+        # Patron 2 — comptage par colonne catégorielle + nb de valeurs distinctes (facile).
+        for col in catcols:
+            add(
+                t,
+                f"Nombre de {t} par {col}.",
+                f"SELECT {col}, COUNT(*) AS n FROM {t} GROUP BY {col}",
+                "facile",
+            )
+            add(
+                t,
+                f"Combien de {col} distincts dans {t} ?",
+                f"SELECT COUNT(DISTINCT {col}) AS n FROM {t}",
+                "facile",
+            )
+        # Patron 3 — moyenne, maximum et minimum d'une colonne numérique (facile).
+        for numcol in numeric[:3]:
+            add(
+                t,
+                f"Moyenne de {numcol} dans {t}.",
+                f"SELECT AVG({numcol}) AS moyenne FROM {t}",
+                "facile",
+            )
+            add(
+                t,
+                f"Valeur maximale de {numcol} dans {t}.",
+                f"SELECT MAX({numcol}) AS maxi FROM {t}",
+                "facile",
+            )
+            add(
+                t,
+                f"Valeur minimale de {numcol} dans {t}.",
+                f"SELECT MIN({numcol}) AS mini FROM {t}",
+                "facile",
+            )
+        # Patron 4 — somme d'une colonne numérique par colonne catégorielle (moyen).
+        for numcol in numeric[:2]:
+            for col in catcols[:2]:
+                add(
+                    t,
+                    f"Somme de {numcol} par {col} dans {t}.",
+                    f"SELECT {col}, SUM({numcol}) AS total FROM {t} GROUP BY {col}",
+                    "moyen",
+                )
+        # Patron 5 — comptage filtré sur une valeur (moyen) : la valeur exacte est
+        # citée (SQL correct garanti), mais teste quand même la rigueur du modèle.
+        for col in catcols[:3]:
+            for val in cats[t][col][:3]:
+                esc = val.replace("'", "''")  # échappe les apostrophes SQL
+                add(
+                    t,
+                    f"Combien de {t} ont {col} égal à « {val} » ?",
+                    f"SELECT COUNT(*) AS n FROM {t} WHERE {col} = '{esc}'",
+                    "moyen",
+                )
+    return cases[:target]
+
+
+def large_bench(total: int = 500) -> list[GoldenCase]:
+    """Assemble le TRÈS grand jeu : les cas curatés + un gros lot généré.
+
+    Parameters
+    ----------
+    total : int
+        Taille totale visée (curatés + générés). 500 par défaut.
+
+    Returns
+    -------
+    list[GoldenCase]
+        ``BENCH`` (curaté, avec jointures/questions naturelles) suivi des cas
+        générés, pour ``total`` requêtes au total.
+    """
+    # On complète le jeu curaté avec juste ce qu'il faut de cas générés.
+    return BENCH + _generate_templated(target=max(0, total - len(BENCH)))

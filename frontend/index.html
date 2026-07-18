@@ -84,7 +84,7 @@
         <div class="h-9 w-9 rounded-xl bg-brand text-white grid place-items-center font-bold" aria-hidden="true">≋</div>
         <div>
           <h1 class="text-lg font-bold leading-tight">Text2SQL — Hôpital</h1>
-          <p class="text-xs text-gray-500 dark:text-gray-400">
+          <p class="text-xs text-gray-500 dark:text-gray-400" data-i18n="app.subtitle">
             Langage naturel → SQL, trois approches, 100 % local (Ollama)
           </p>
         </div>
@@ -93,10 +93,14 @@
       <div class="ml-auto flex items-center gap-2">
         <!-- Badges d'état, remplis par app.js au chargement (/api/health). -->
         <div id="health-badges" class="hidden sm:flex items-center gap-2 text-xs"></div>
+        <!-- Bascule de LANGUE (🌐), juste à gauche du thème. Bascule fr/en. -->
+        <button id="lang-toggle"
+                class="rounded-lg px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-brand"
+                data-i18n-aria-label="lang.toggle" aria-label="Change language">🌐</button>
         <!-- Bascule mode sombre. -->
         <button id="theme-toggle"
                 class="rounded-lg px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-brand"
-                aria-label="Basculer le thème clair/sombre">🌓</button>
+                data-i18n-aria-label="theme.toggle" aria-label="Basculer le thème clair/sombre">🌓</button>
       </div>
     </div>
   </header>
@@ -106,25 +110,26 @@
     <section class="space-y-6">
       <!-- --- Zone de saisie de la question --- -->
       <div class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
-        <label for="question" class="block text-sm font-medium mb-2">
+        <label for="question" class="block text-sm font-medium mb-2" data-i18n="question.label">
           Pose ta question en français
         </label>
         <textarea id="question" rows="2"
                   class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-950 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+                  data-i18n-placeholder="question.placeholder"
                   placeholder="Ex. : Chiffre d'affaires encaissé par mois en 2026"></textarea>
 
         <div class="mt-3 flex flex-wrap items-center gap-3">
           <!-- Sélecteur d'approche (segmented control). -->
-          <div class="inline-flex rounded-xl border border-gray-300 dark:border-gray-700 overflow-hidden text-sm" role="group" aria-label="Choix de l'approche">
+          <div class="inline-flex rounded-xl border border-gray-300 dark:border-gray-700 overflow-hidden text-sm" role="group" data-i18n-aria-label="approach.group" aria-label="Choix de l'approche">
             <button data-approach="qwen" aria-pressed="true" class="approach-btn px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand">QwenCoder</button>
             <button data-approach="langchain" aria-pressed="false" class="approach-btn px-3 py-2 border-l border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand">LangChain</button>
             <button data-approach="vanna" aria-pressed="false" class="approach-btn px-3 py-2 border-l border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand">Vanna</button>
-            <button data-approach="toutes" aria-pressed="false" class="approach-btn px-3 py-2 border-l border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand">Toutes</button>
+            <button data-approach="toutes" aria-pressed="false" data-i18n="approach.all" class="approach-btn px-3 py-2 border-l border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand">Toutes</button>
           </div>
 
           <button id="run-btn"
                   class="ml-auto inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-brand disabled:opacity-50">
-            <span>Exécuter</span>
+            <span data-i18n="run">Exécuter</span>
             <span id="run-spinner" aria-hidden="true" class="hidden animate-spin motion-reduce:animate-none">⏳</span>
           </button>
         </div>
@@ -132,7 +137,7 @@
 
       <!-- --- Questions d'exemple (chips par domaine), remplies par app.js --- -->
       <div class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
-        <h2 class="text-sm font-medium mb-3">Exemples à cliquer</h2>
+        <h2 class="text-sm font-medium mb-3" data-i18n="examples.heading">Exemples à cliquer</h2>
         <div id="samples" class="flex flex-wrap gap-2"></div>
       </div>
 
