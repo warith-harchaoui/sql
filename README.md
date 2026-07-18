@@ -9,7 +9,8 @@
 > how does it actually work?"*.
 
 Everything runs locally through **[Ollama](https://ollama.com)** — no data leaves
-the machine, no API key, no cloud.
+the machine, no API key, no cloud. With concurrency and multi users, I would
+prefer vLLM.
 
 ![Demo home screen](docs/screenshots/01-accueil-clair.png)
 

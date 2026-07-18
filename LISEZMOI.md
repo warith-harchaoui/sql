@@ -9,7 +9,8 @@
 > des collègues qui demandent *« mais concrètement, ça marche comment ? »*.
 
 Tout tourne en local via **[Ollama](https://ollama.com)** — aucune donnée ne
-quitte la machine, aucune clé d'API, aucun cloud.
+quitte la machine, aucune clé d'API, aucun cloud. En contexte multi-utilisateurs
+et concurrentiel, je préférerais vLLM.
 
 ![Accueil de la démo](docs/screenshots/01-accueil-clair.png)
 

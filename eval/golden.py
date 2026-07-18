@@ -36,6 +36,9 @@ class GoldenCase:
         Vrai si l'ordre des lignes fait partie de la réponse (présence d'un
         ORDER BY sémantiquement important). Sinon la comparaison est faite en
         ensembliste (ordre ignoré).
+    difficulte : str
+        Niveau de difficulté (« facile » / « moyen » / « difficile ») — sert à
+        ventiler l'exactitude par palier dans le benchmark.
     """
 
     id: str
@@ -43,6 +46,7 @@ class GoldenCase:
     question: str
     sql_ref: str
     ordered: bool = False
+    difficulte: str = "moyen"
 
 
 # Jeu de référence. Les requêtes sont volontairement « canoniques » et lisibles ;
