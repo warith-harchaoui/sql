@@ -98,13 +98,31 @@ sessions / surgery → imaging → lab → billing).
 
 ## Architecture
 
-```
-Browser (frontend/)  ──HTTP──►  FastAPI (backend/server.py)
-  Tailwind + Vega-Lite               │
-                                     ├─ approaches/  ─► Ollama (qwen2.5-coder)
-                                     │    qwen · langchain · vanna
-                                     ├─ figures.py   ─► Ollama (gemma4) → Vega-Lite
-                                     └─ db.py         ─► SQLite (READ-ONLY)
+```mermaid
+flowchart LR
+    B["Browser — frontend/<br/>Tailwind + Vega-Lite"] -->|HTTP| S["FastAPI<br/>backend/server.py"]
+    S --> A["approaches/<br/>qwen · langchain · vanna"]
+    S --> F["figures.py"]
+    S --> D["db.py"]
+    A -->|prompt| O1(["Ollama — qwen2.5-coder"])
+    F -->|picks a chart| O2(["Ollama — gemma4 → Vega-Lite"])
+    D -->|read-only| DB[("SQLite — READ-ONLY")]
+
+    %% Palette : https://harchaoui.org/warith/colors/ (fonds clairs + traits saturés)
+    classDef front    fill:#CCE4FF,stroke:#007AFF,color:#0a2540;
+    classDef api      fill:#EFDCF8,stroke:#AF52DE,color:#2e1440;
+    classDef approach fill:#D4F5D9,stroke:#28CD41,color:#0b3d16;
+    classDef figure   fill:#FFEACC,stroke:#FF9500,color:#3d2600;
+    classDef data     fill:#E6E6E6,stroke:#808080,color:#1a1a1a;
+    classDef model    fill:#FFF5CC,stroke:#FFCC00,color:#3d3200;
+    classDef store    fill:#EDD4D4,stroke:#A52A2A,color:#3a1414;
+    class B front;
+    class S api;
+    class A approach;
+    class F figure;
+    class D data;
+    class O1,O2 model;
+    class DB store;
 ```
 
 **Security**: LLM-generated SQL is never executed by the frameworks themselves.
@@ -190,13 +208,43 @@ CI (`.github/workflows/ci.yml`) runs lint + the fast suite on every push / PR.
 
 ## Layout
 
-```
-backend/      db.py · llm.py · figures.py · server.py · build_db.py
-  approaches/ base.py · qwen_ollama.py · langchain_sql.py · vanna_rag.py
-eval/         golden.py · execution_match.py · deepeval_metric.py · giskard_scan.py · run_eval.py
-frontend/     index.html · app.js · vendor/tailwindcss.js
-tests/        test_db · test_approaches_and_figures · test_eval_and_api · test_integration
-docs/         screenshots/
+```mermaid
+flowchart TB
+    subgraph backend["backend/"]
+        direction LR
+        db["db.py"]; llm["llm.py"]; fig["figures.py"]; srv["server.py"]; bld["build_db.py"]
+        subgraph approaches["approaches/"]
+            direction LR
+            base["base.py"]; qw["qwen_ollama.py"]; lc["langchain_sql.py"]; vn["vanna_rag.py"]
+        end
+    end
+    subgraph eval["eval/"]
+        direction LR
+        gold["golden.py"]; exm["execution_match.py"]; de["deepeval_metric.py"]; gk["giskard_scan.py"]; rev["run_eval.py"]
+    end
+    subgraph frontend["frontend/"]
+        direction LR
+        idx["index.html"]; app["app.js"]; tw["vendor/tailwindcss.js"]
+    end
+    subgraph tests["tests/"]
+        direction LR
+        t1["test_db"]; t2["test_approaches_and_figures"]; t3["test_eval_and_api"]; t4["test_integration"]
+    end
+    docs["docs/screenshots/"]
+
+    %% Palette : https://harchaoui.org/warith/colors/
+    classDef beC   fill:#EFDCF8,stroke:#AF52DE,color:#2e1440;
+    classDef apC   fill:#D4F5D9,stroke:#28CD41,color:#0b3d16;
+    classDef evC   fill:#FFEACC,stroke:#FF9500,color:#3d2600;
+    classDef frC   fill:#CCE4FF,stroke:#007AFF,color:#0a2540;
+    classDef teC   fill:#FFF5CC,stroke:#FFCC00,color:#3d3200;
+    classDef doC   fill:#E6E6E6,stroke:#808080,color:#1a1a1a;
+    class db,llm,fig,srv,bld beC;
+    class base,qw,lc,vn apC;
+    class gold,exm,de,gk,rev evC;
+    class idx,app,tw frC;
+    class t1,t2,t3,t4 teC;
+    class docs doC;
 ```
 
 ---
