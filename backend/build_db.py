@@ -1,6 +1,6 @@
-"""Génère une base SQLite riche et cohérente pour un institut de cancérologie.
+"""Génère une base SQLite riche et cohérente pour un hôpital.
 
-Institut fictif : « Institut Curie-Deraison ».
+Institut fictif : « Hôpital Deraison ».
 
 Domaines couverts :
   - Médical      : patients, séjours, diagnostics (CIM-10 + TNM), traitements,
@@ -652,7 +652,7 @@ def build(out_path: Path) -> None:
                     metier,
                     "Medical",
                     sid,
-                    f"{prenom.lower()}.{nom.lower()}@institut-cd.fr",
+                    f"{prenom.lower()}.{nom.lower()}@hopital-deraison.fr",
                     fake.phone_number(),
                 ),
             )
@@ -680,7 +680,7 @@ def build(out_path: Path) -> None:
                 metier,
                 cat,
                 sid,
-                f"{prenom.lower()}.{nom.lower()}@institut-cd.fr",
+                f"{prenom.lower()}.{nom.lower()}@hopital-deraison.fr",
                 fake.phone_number(),
             ),
         )

@@ -1,6 +1,6 @@
 [🇫🇷](MODEDEMPLOI.md) · [🇬🇧](USERGUIDE.md)
 
-# Mode d'emploi — Text2SQL Institut de Cancérologie
+# Mode d'emploi — Text2SQL Hôpital
 
 Guide pas-à-pas illustré de l'interface web. Pour l'installation, voir
 [LISEZMOI.md](LISEZMOI.md) ; pour les recettes en ligne de commande,

@@ -1,6 +1,6 @@
 [🇫🇷](LISEZMOI.md) · [🇬🇧](README.md)
 
-# Text2SQL — Cancer Institute 🎗️
+# Text2SQL — Hospital 🏥
 
 > **How do you turn plain language into SQL?** A hands-on, 100 % local demo that
 > translates a French question into a SQL query **three different ways**, runs it
@@ -15,6 +15,46 @@ the machine, no API key, no cloud.
 
 📖 Illustrated step-by-step guides: **[USERGUIDE.md](USERGUIDE.md)** (🇬🇧) ·
 **[MODEDEMPLOI.md](MODEDEMPLOI.md)** (🇫🇷).
+
+---
+
+## Why this project exists — the pedagogical goal
+
+This repository is a **teaching artefact**, not a product. It was built to answer,
+concretely, a question colleagues keep asking: **"text-to-SQL — how does it
+actually work, and which way should we do it?"**
+
+Most tutorials show *one* library on a toy 2-table database and stop at "look, it
+generated some SQL". That teaches almost nothing about the real decisions. This
+project is deliberately different, so that a reader *learns the trade-offs by
+seeing them side by side*:
+
+1. **It makes the core idea impossible to miss.** The one thing that decides
+   text-to-SQL quality is *how the database schema reaches the LLM*. So the three
+   approaches differ **only** on that axis — same database, same local model,
+   same execution guard — and show their generated SQL every time. You read the
+   difference instead of being told about it: a hand-written prompt (**QwenCoder,
+   raw**), a framework that does it for you (**LangChain**), and retrieval of just
+   the relevant context (**Vanna, RAG**).
+2. **It runs for real on a believable database.** A 30-table, ~33k-row hospital
+   (medical, HR, accounting, equipment, pharmacy, clinical trials) — because
+   real questions and real joins are where naive text-to-SQL breaks, and a toy
+   schema would hide exactly what students need to see.
+3. **It is honest about failure.** It *measures* accuracy (execution accuracy,
+   like Spider/BIRD), ships an easy **and** a deliberately hard question set to
+   expose the real ceiling, and its [`ASSESSMENT.md`](ASSESSMENT.md) says plainly
+   what works and what doesn't. The lesson isn't "LLMs write SQL" — it's that the
+   hard part is guaranteeing the SQL answers the *right* question.
+4. **It shows the guardrails, not just the magic.** Read-only execution, why
+   LLM-generated code is never `exec`'d, why Vanna's CVE matters, and how a model
+   (**Gemma**) can pick a *chart* safely (a Vega-Lite spec, not executed code).
+5. **It is 100 % local (Ollama).** So the demo can be run, inspected, and modified
+   by anyone, with no API key, no cost, and no data leaving the machine — the
+   whole point of a thing you learn *from* by taking it apart.
+
+In short: read the code and the docs top-to-bottom and you should come away
+understanding **how** text-to-SQL works, **which** approach fits **which**
+situation, and **why** the honest answer is "it depends".
 
 ---
 
@@ -37,7 +77,7 @@ result and returns a **Vega-Lite** spec rendered in the browser.
 
 ---
 
-## The database: a fictional cancer institute
+## The database: a fictional hospital
 
 `data/institut.db` (SQLite, generated, deterministic): **30 tables, ~33,000 rows**,
 with a coherent care pathway (diagnosis → treatment → chemo cycles / radiotherapy

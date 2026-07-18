@@ -1,32 +1,97 @@
-# --- Config réelle : on garde les *.example, on ignore le reste (CODING.md §9) ---
+# =============================================================================
+# .gitignore — démo Text2SQL
+# Règle d'or (CODING.md §9) : on IGNORE la config réelle et les artefacts
+# générés, on GARDE les *.example et le code source.
+# =============================================================================
+
+# --- Secrets & config réelle : on garde les *.example, on ignore le reste ----
 .env
-*.env
+.env.*
 !.env.example
 *config.json
 !*config.json.example
+secrets.yaml
+*.secret
 
-# --- Base et artefacts générés ---
+# --- Base de données & artefacts générés localement --------------------------
+# La base est reconstructible à l'identique (seed figée) : inutile de la versionner.
 data/institut.db
-data/vanna_chroma/
+data/*.db
+data/*.sqlite
 *.sqlite
+*.sqlite3
 *.db-journal
+*.db-wal
+*.db-shm
+# Index vectoriel de Vanna (ChromaDB), régénéré à l'entraînement.
+data/vanna_chroma/
+**/chroma.sqlite3
 
-# --- Python ---
+# --- Python ------------------------------------------------------------------
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
 *.egg-info/
+*.egg
+.eggs/
+pip-wheel-metadata/
+
+# --- Tests, couverture, lint, types ------------------------------------------
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
+.dmypy.json
 .coverage
+.coverage.*
+coverage.xml
 htmlcov/
-.deepeval/
+.cache/
+.hypothesis/
 
-# --- Environnements virtuels ---
+# --- Évaluation IA (caches locaux) -------------------------------------------
+.deepeval/
+.deepeval_cache/
+giskard_reports/
+
+# --- Environnements virtuels -------------------------------------------------
 .venv/
 venv/
 env/
+ENV/
+.python-version
 
-# --- OS / éditeurs ---
+# --- Outils front / Node (le front est vanilla, mais au cas où) --------------
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# --- Jupyter -----------------------------------------------------------------
+.ipynb_checkpoints/
+
+# --- Sorties temporaires / scratch -------------------------------------------
+*.log
+tmp/
+scratch/
+*.tmp
+
+# --- OS ----------------------------------------------------------------------
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# --- Éditeurs / IDE ----------------------------------------------------------
 .idea/
 .vscode/
+*.swp
+*.swo
+*~
+*.sublime-workspace

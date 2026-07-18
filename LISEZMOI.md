@@ -1,6 +1,6 @@
 [🇫🇷](LISEZMOI.md) · [🇬🇧](README.md)
 
-# Text2SQL — Institut de Cancérologie 🎗️
+# Text2SQL — Hôpital 🏥
 
 > **Comment on fait du « texte → SQL » ?** Une démo pédagogique, 100 % locale,
 > qui traduit une question en français en requête SQL de **trois façons
@@ -15,6 +15,49 @@ quitte la machine, aucune clé d'API, aucun cloud.
 
 📖 Guides pas-à-pas illustrés : **[MODEDEMPLOI.md](MODEDEMPLOI.md)** (🇫🇷) ·
 **[USERGUIDE.md](USERGUIDE.md)** (🇬🇧).
+
+---
+
+## Pourquoi ce projet — l'objectif pédagogique
+
+Ce dépôt est un **artefact pédagogique**, pas un produit. Il répond concrètement à
+la question que des collègues posent sans arrêt : **« le text-to-SQL, comment ça
+marche vraiment, et laquelle des méthodes choisir ? »**
+
+La plupart des tutos montrent *une* bibliothèque sur une base jouet à 2 tables et
+s'arrêtent à « regardez, ça a généré du SQL ». On n'y apprend presque rien des
+vraies décisions. Ce projet fait exprès l'inverse, pour qu'on *apprenne les
+compromis en les voyant côte à côte* :
+
+1. **Il rend l'idée centrale impossible à rater.** Ce qui fait la qualité d'un
+   text-to-SQL, c'est *la façon dont le schéma arrive au LLM*. Les trois approches
+   ne diffèrent donc **que** sur cet axe — même base, même modèle local, même
+   garde-fou d'exécution — et affichent leur SQL généré à chaque fois. On *lit* la
+   différence au lieu qu'on nous la raconte : un prompt écrit à la main
+   (**QwenCoder brut**), un framework qui le fait pour vous (**LangChain**), et la
+   récupération du seul contexte pertinent (**Vanna, RAG**).
+2. **Il tourne pour de vrai sur une base crédible.** Un hôpital de 30 tables et
+   ~33 000 lignes (médical, RH, compta, matériel, pharmacie, essais cliniques) —
+   parce que c'est sur des vraies questions et des vraies jointures que le
+   text-to-SQL naïf casse, et qu'une base jouet cacherait justement ce qu'il faut
+   montrer.
+3. **Il est honnête sur l'échec.** Il *mesure* la qualité (exactitude d'exécution,
+   comme Spider/BIRD), livre un jeu de questions faciles **et** un jeu difficile
+   exprès pour exposer le vrai plafond, et son [`ASSESSMENT.md`](ASSESSMENT.md) dit
+   franchement ce qui marche et ce qui ne marche pas. La leçon n'est pas « les LLM
+   écrivent du SQL » — c'est que le dur, c'est de garantir que le SQL répond à la
+   *bonne* question.
+4. **Il montre les garde-fous, pas seulement la magie.** Exécution en lecture
+   seule, pourquoi on n'exécute jamais le code produit par un LLM, pourquoi la CVE
+   de Vanna compte, et comment un modèle (**Gemma**) peut choisir une *figure* sans
+   risque (une spec Vega-Lite, pas du code exécuté).
+5. **Il est 100 % local (Ollama).** La démo peut être lancée, inspectée et modifiée
+   par n'importe qui, sans clé d'API, sans coût, et sans qu'aucune donnée ne quitte
+   la machine — tout l'intérêt d'un objet dont on apprend *en le démontant*.
+
+En bref : lisez le code et la doc de bout en bout et vous devriez repartir en
+comprenant **comment** marche le text-to-SQL, **quelle** approche va avec **quelle**
+situation, et **pourquoi** la réponse honnête est « ça dépend ».
 
 ---
 
@@ -37,7 +80,7 @@ et renvoie une spec **Vega-Lite** rendue dans le navigateur.
 
 ---
 
-## La base : un institut de cancérologie fictif
+## La base : un hôpital fictif
 
 `data/institut.db` (SQLite, généré, déterministe) : **30 tables, ~33 000 lignes**,
 avec un parcours de soins cohérent (diagnostic → traitement → cures/séances/

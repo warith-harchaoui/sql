@@ -194,7 +194,7 @@ def _run_one(key: str, request: QueryRequest) -> dict:
 # --------------------------------------------------------------------------- #
 
 app = FastAPI(
-    title="Text2SQL — Institut de Cancérologie",
+    title="Text2SQL — Hôpital",
     description="Démo pédagogique : traduire le langage naturel en SQL, "
     "de trois façons, 100 % en local via Ollama.",
     version="1.0.0",

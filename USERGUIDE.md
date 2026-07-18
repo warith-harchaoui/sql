@@ -1,6 +1,6 @@
 [🇫🇷](MODEDEMPLOI.md) · [🇬🇧](USERGUIDE.md)
 
-# User guide — Text2SQL Cancer Institute
+# User guide — Text2SQL Hospital
 
 Illustrated, step-by-step tour of the web interface. For installation see
 [README.md](README.md); for command-line recipes see [EXAMPLES.md](EXAMPLES.md).
