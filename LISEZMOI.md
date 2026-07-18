@@ -198,6 +198,11 @@ faciles ne prouve rien ; le `--hard` montre où un modèle local craque vraiment
   (invariance de la réponse aux perturbations de la question) —
   `eval/giskard_scan.py`.
 
+📊 **Étude numérique complète** — latence, vitesse et exactitude des trois
+approches sur 46 requêtes réalistes, avec un violin de la distribution de latence
+et le temps de calcul mesuré par Ollama : **[`BENCHMARK.md`](BENCHMARK.md)**
+(`python -m eval.benchmark && python -m eval.bench_charts`).
+
 ---
 
 ## Tests
@@ -239,6 +244,22 @@ flowchart TB
     end
     docs["docs/screenshots/"]
 
+    %% Arcs : qui dépend de qui (le flux réel du dépôt)
+    idx -->|HTTP| srv
+    app -->|HTTP| srv
+    srv --> qw
+    srv --> lc
+    srv --> vn
+    srv --> fig
+    srv --> db
+    qw --> base
+    lc --> base
+    vn --> base
+    rev --> qw
+    rev --> exm
+    exm --> db
+    bld --> db
+
     %% Palette : https://harchaoui.org/warith/colors/
     classDef beC fill:#EFDCF8,stroke:#AF52DE,color:#2e1440;
     classDef apC fill:#D4F5D9,stroke:#28CD41,color:#0b3d16;
@@ -252,6 +273,14 @@ flowchart TB
     class idx,app,tw frC;
     class t1,t2,t3,t4 teC;
     class docs doC;
+
+    %% Conteneurs de sous-graphes : fonds quasi-blancs teintés (bordure = couleur
+    %% du groupe) pour que les nœuds pastel ressortent au lieu d'être noyés.
+    style backend fill:#FBF7FF,stroke:#AF52DE,color:#2e1440;
+    style approaches fill:#F4FFF7,stroke:#28CD41,color:#0b3d16;
+    style eval fill:#FFFBF4,stroke:#FF9500,color:#3d2600;
+    style frontend fill:#F4FAFF,stroke:#007AFF,color:#0a2540;
+    style tests fill:#FFFDF4,stroke:#E0B400,color:#3d3200;
 ```
 
 ---

@@ -62,6 +62,16 @@
   <style>
     /* Petit rendu « bloc de code » lisible pour le SQL généré. */
     .sql-code { white-space: pre-wrap; word-break: break-word; }
+
+    /* Le Tailwind vendored (Play CDN) ne génère PAS la couleur custom « brand ».
+       On définit donc les utilitaires brand en CSS pur : déterministe, hors JIT.
+       Couleur #0063cc = accessible (texte blanc ≥ 4.5:1, WCAG AA). */
+    .bg-brand { background-color: #0063cc; }
+    .hover\:bg-brand:hover { background-color: #0063cc; }
+    .hover\:bg-brand-dark:hover { background-color: #00509e; }
+    .text-brand { color: #0063cc; }
+    /* Recolore l'anneau de focus Tailwind (focus:ring-2) à la couleur brand. */
+    .focus\:ring-brand:focus { --tw-ring-color: #0063cc; }
   </style>
 </head>
 

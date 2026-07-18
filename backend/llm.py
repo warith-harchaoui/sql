@@ -33,7 +33,15 @@ MODEL_EMBED = os.environ.get("MODEL_EMBED", "nomic-embed-text:latest")  # RAG (V
 
 @dataclass
 class LLMResult:
-    """Réponse d'une complétion, enrichie de métadonnées de traçabilité."""
+    """Réponse d'une complétion, enrichie de métadonnées de traçabilité.
+
+    En plus de la latence horloge murale (``latency_s``, sensible à la charge
+    de la machine), on remonte les **durées mesurées par Ollama lui-même**
+    (champs ``server_*`` et ``eval_*``). Ces durées isolent le temps de calcul
+    utile (chargement, traitement du prompt, génération) indépendamment de
+    l'ordonnancement du process Python — c'est la mesure « propre » du temps
+    GPU/CPU, insensible aux autres activités de la machine.
+    """
 
     content: str
     model: str
@@ -41,6 +49,25 @@ class LLMResult:
     ok: bool = True
     error: str | None = None
     usage: dict = field(default_factory=dict)
+    # Durées côté serveur Ollama (en secondes ; 0 si absentes du build).
+    server_total_s: float = 0.0  # total_duration : bout-en-bout côté Ollama
+    server_load_s: float = 0.0  # load_duration  : chargement du modèle
+    server_prompt_s: float = 0.0  # prompt_eval_duration : lecture du prompt
+    server_eval_s: float = 0.0  # eval_duration  : génération des tokens
+    eval_count: int = 0  # nombre de tokens générés
+
+    @property
+    def tokens_per_s(self) -> float:
+        """Vitesse de génération (tokens/s) mesurée par Ollama — quasi insensible à la charge.
+
+        Returns
+        -------
+        float
+            ``eval_count / server_eval_s`` (0 si la durée est inconnue).
+        """
+        # C'est LA vitesse hardware pure : combien de tokens le GPU sort par
+        # seconde, indépendamment de ce que fait le reste de la machine.
+        return self.eval_count / self.server_eval_s if self.server_eval_s > 0 else 0.0
 
 
 def chat(
@@ -92,11 +119,22 @@ def chat(
             "prompt_tokens": int(data.get("prompt_eval_count", 0) or 0),
             "completion_tokens": int(data.get("eval_count", 0) or 0),
         }
+        # Durées serveur Ollama : nanosecondes -> secondes. Absentes => 0.
+        ns = 1e9
+        server_total_s = float(data.get("total_duration", 0) or 0) / ns
+        server_load_s = float(data.get("load_duration", 0) or 0) / ns
+        server_prompt_s = float(data.get("prompt_eval_duration", 0) or 0) / ns
+        server_eval_s = float(data.get("eval_duration", 0) or 0) / ns
         return LLMResult(
             content=content,
             model=model,
             latency_s=time.perf_counter() - started,
             usage=usage,
+            server_total_s=server_total_s,
+            server_load_s=server_load_s,
+            server_prompt_s=server_prompt_s,
+            server_eval_s=server_eval_s,
+            eval_count=int(data.get("eval_count", 0) or 0),
         )
     except Exception as exc:  # réseau, timeout, HTTP, JSON — tout est capté
         return LLMResult(

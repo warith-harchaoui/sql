@@ -193,6 +193,11 @@ functions) exists on purpose — a 100% score on easy questions proves little; t
 - **[Giskard](https://github.com/Giskard-AI/giskard)**: **robustness** scan
   (answer invariance under question perturbations) — `eval/giskard_scan.py`.
 
+📊 Full **numerical study** — latency, speed and accuracy across the three
+approaches on 46 realistic queries, with a violin plot of the latency
+distribution and Ollama-measured compute time: **[`BENCHMARK.md`](BENCHMARK.md)**
+(`python -m eval.benchmark && python -m eval.bench_charts`).
+
 ---
 
 ## Tests
@@ -233,6 +238,22 @@ flowchart TB
     end
     docs["docs/screenshots/"]
 
+    %% Arcs : qui dépend de qui (le flux réel du dépôt)
+    idx -->|HTTP| srv
+    app -->|HTTP| srv
+    srv --> qw
+    srv --> lc
+    srv --> vn
+    srv --> fig
+    srv --> db
+    qw --> base
+    lc --> base
+    vn --> base
+    rev --> qw
+    rev --> exm
+    exm --> db
+    bld --> db
+
     %% Palette : https://harchaoui.org/warith/colors/
     classDef beC   fill:#EFDCF8,stroke:#AF52DE,color:#2e1440;
     classDef apC   fill:#D4F5D9,stroke:#28CD41,color:#0b3d16;
@@ -246,6 +267,14 @@ flowchart TB
     class idx,app,tw frC;
     class t1,t2,t3,t4 teC;
     class docs doC;
+
+    %% Conteneurs de sous-graphes : fonds quasi-blancs teintés (bordure = couleur
+    %% du groupe) pour que les nœuds pastel ressortent au lieu d'être noyés.
+    style backend fill:#FBF7FF,stroke:#AF52DE,color:#2e1440;
+    style approaches fill:#F4FFF7,stroke:#28CD41,color:#0b3d16;
+    style eval fill:#FFFBF4,stroke:#FF9500,color:#3d2600;
+    style frontend fill:#F4FAFF,stroke:#007AFF,color:#0a2540;
+    style tests fill:#FFFDF4,stroke:#E0B400,color:#3d3200;
 ```
 
 ---

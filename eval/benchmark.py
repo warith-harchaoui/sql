@@ -13,6 +13,7 @@ Usage :
     python -m eval.benchmark --approaches qwen vanna  # sous-ensemble
     python -m eval.benchmark --out eval/benchmark_results.json
 """
+
 from __future__ import annotations
 
 import argparse
@@ -75,13 +76,21 @@ def _percentile(values: list[float], pct: float) -> float:
     return ordered[low] * (1 - frac) + ordered[high] * frac
 
 
-def run_one_approach(key: str) -> dict:
+def run_one_approach(key: str, repeats: int = 3) -> dict:
     """Fait tourner une approche sur tout ``BENCH`` et collecte les mesures.
+
+    Chaque requête est générée ``repeats`` fois ; on garde le **minimum** de
+    latence horloge murale. Justification : le bruit (autres activités de la
+    machine) ne fait qu'*ajouter* du temps, donc le minimum observé approche la
+    latence « propre », débruitée. On capte aussi le temps mesuré PAR OLLAMA
+    (``server_s``) et la vitesse ``tokens_per_s`` quand l'approche les expose.
 
     Parameters
     ----------
     key : str
         Clé d'approche (``qwen`` / ``langchain`` / ``vanna``).
+    repeats : int
+        Nombre de répétitions par requête (on garde le min de latence).
 
     Returns
     -------
@@ -97,25 +106,51 @@ def run_one_approach(key: str) -> dict:
         return {"key": key, "label": label, "available": False, "error": str(exc), "records": []}
 
     records: list[dict] = []
-    # On déroule chaque cas : on chronomètre la génération, puis on compare
-    # l'exécution du SQL généré à celle de la référence.
+    # On déroule chaque cas : on répète la génération, on garde le min de latence,
+    # puis on compare l'exécution du SQL généré à celle de la référence.
     for i, case in enumerate(BENCH, 1):
-        started = time.perf_counter()
-        gen = approach.generate(case.question)
-        latency = time.perf_counter() - started
+        walls: list[float] = []
+        server_times: list[float] = []
+        tps_values: list[float] = []
+        gen = None
+        for _ in range(max(1, repeats)):
+            started = time.perf_counter()
+            gen = approach.generate(case.question)
+            walls.append(time.perf_counter() - started)
+            # Temps serveur Ollama et tokens/s : présents seulement sur les
+            # approches instrumentées (QwenCoder). On collecte quand c'est là.
+            if gen.server_s:
+                server_times.append(gen.server_s)
+            if gen.tokens_per_s:
+                tps_values.append(gen.tokens_per_s)
+        # Le SQL est déterministe (température 0) : le verdict est stable ; on
+        # évalue la dernière génération.
         verdict = evaluate_sql(gen.sql, case.sql_ref, ordered=case.ordered)
-        records.append({
-            "id": case.id,
-            "domaine": case.domaine,
-            "difficulte": case.difficulte,
-            "latency_s": round(latency, 4),
-            "gen_ok": gen.ok,
-            "exec_ok": verdict.gen_rows != -1,
-            "match": verdict.match,
-        })
+        records.append(
+            {
+                "id": case.id,
+                "domaine": case.domaine,
+                "difficulte": case.difficulte,
+                # Latence débruitée = minimum sur les répétitions.
+                "latency_s": round(min(walls), 4),
+                # Temps de calcul propre (Ollama) : min ; vitesse : max (meilleur cas).
+                "server_s": round(min(server_times), 4) if server_times else None,
+                "tokens_per_s": round(max(tps_values), 1) if tps_values else None,
+                "gen_ok": gen.ok,
+                "exec_ok": verdict.gen_rows != -1,
+                "match": verdict.match,
+            }
+        )
         # Trace de progression : utile car la campagne complète est longue.
-        logger.info("[%s] %d/%d %s  %.2fs  %s",
-                    key, i, len(BENCH), case.id, latency, "✓" if verdict.match else "✗")
+        logger.info(
+            "[%s] %d/%d %s  min %.2fs  %s",
+            key,
+            i,
+            len(BENCH),
+            case.id,
+            min(walls),
+            "✓" if verdict.match else "✗",
+        )
     return {"key": key, "label": label, "available": True, "records": records}
 
 
@@ -152,7 +187,12 @@ def summarize(result: dict) -> dict:
                 "accuracy": sum(subset) / len(subset),
             }
 
-    return {
+    # Mesures propres côté Ollama (présentes seulement pour les approches
+    # instrumentées, ex. QwenCoder) : temps serveur et vitesse tokens/s.
+    server_times = [r["server_s"] for r in records if r.get("server_s")]
+    tps = [r["tokens_per_s"] for r in records if r.get("tokens_per_s")]
+
+    summary = {
         "key": result["key"],
         "label": result["label"],
         "n": len(records),
@@ -166,9 +206,15 @@ def summarize(result: dict) -> dict:
         "total_time_s": total_time,
         "throughput_per_min": 60 * len(records) / total_time if total_time else 0.0,
     }
+    # On n'ajoute les stats serveur que si l'approche les fournit.
+    if server_times:
+        summary["server_median_s"] = statistics.median(server_times)
+    if tps:
+        summary["tokens_per_s_median"] = statistics.median(tps)
+    return summary
 
 
-def run_benchmark(keys: list[str], out_path: Path = DEFAULT_OUT) -> dict:
+def run_benchmark(keys: list[str], out_path: Path = DEFAULT_OUT, repeats: int = 3) -> dict:
     """Exécute le benchmark pour les approches demandées et écrit le JSON.
 
     Parameters
@@ -177,6 +223,8 @@ def run_benchmark(keys: list[str], out_path: Path = DEFAULT_OUT) -> dict:
         Clés d'approches à évaluer.
     out_path : pathlib.Path
         Où écrire les résultats bruts + résumés (consommés par les figures).
+    repeats : int
+        Répétitions par requête (min de latence retenu) — robustesse au bruit.
 
     Returns
     -------
@@ -187,14 +235,15 @@ def run_benchmark(keys: list[str], out_path: Path = DEFAULT_OUT) -> dict:
     summaries: list[dict] = []
     # Séquentiel : on veut des latences propres, pas de contention GPU/CPU.
     for key in keys:
-        logger.info("=== Approche %s ===", key)
-        res = run_one_approach(key)
+        logger.info("=== Approche %s (repeats=%d) ===", key, repeats)
+        res = run_one_approach(key, repeats=repeats)
         approaches_raw.append(res)
         if res["available"]:
             summaries.append(summarize(res))
 
     report = {
         "n_cases": len(BENCH),
+        "repeats": repeats,
         "approaches": approaches_raw,
         "summaries": summaries,
     }
@@ -225,8 +274,10 @@ def _format_summary(summaries: list[dict]) -> str:
     for s in summaries:
         d = s.get("accuracy_by_difficulty", {})
         # Accuracy d'un palier formatée, ou « - » s'il est absent.
-        cell = {niv: (f"{d[niv]['accuracy']:.0%}" if niv in d else "-")
-                for niv in ("facile", "moyen", "difficile")}
+        cell = {
+            niv: (f"{d[niv]['accuracy']:.0%}" if niv in d else "-")
+            for niv in ("facile", "moyen", "difficile")
+        }
         lines.append(
             f"{s['label']:<20} {s['accuracy']:>6.0%} {cell['facile']:>7} {cell['moyen']:>7} "
             f"{cell['difficile']:>7} {s['latency_median']:>7.2f}s {s['latency_p95']:>7.2f}s "
@@ -245,12 +296,16 @@ def main() -> int:
     """
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     parser = argparse.ArgumentParser(description="Benchmark text2sql (latence + exactitude).")
-    parser.add_argument("--approaches", nargs="+", default=list(_APPROACHES),
-                        choices=list(_APPROACHES))
+    parser.add_argument(
+        "--approaches", nargs="+", default=list(_APPROACHES), choices=list(_APPROACHES)
+    )
     parser.add_argument("--out", default=str(DEFAULT_OUT))
+    parser.add_argument(
+        "--repeats", type=int, default=3, help="Répétitions par requête (min de latence)."
+    )
     args = parser.parse_args()
 
-    report = run_benchmark(args.approaches, Path(args.out))
+    report = run_benchmark(args.approaches, Path(args.out), repeats=args.repeats)
     logger.info("\n%s", _format_summary(report["summaries"]))
     return 0
 

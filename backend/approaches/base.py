@@ -49,6 +49,14 @@ class SQLGeneration:
         Sortie brute du modèle avant nettoyage — affichée pour la transparence.
     notes : str
         Remarque pédagogique sur ce que fait l'approche.
+    server_s : float | None
+        Temps de calcul mesuré par Ollama (``total_duration``), insensible à la
+        charge de la machine. ``None`` si l'approche ne l'expose pas (frameworks
+        qui ont leur propre client Ollama).
+    gen_tokens : int | None
+        Nombre de tokens générés (pour la vitesse tokens/s), quand disponible.
+    tokens_per_s : float | None
+        Vitesse de génération mesurée par Ollama (tokens/s), quand disponible.
     """
 
     sql: str
@@ -59,6 +67,9 @@ class SQLGeneration:
     error: str | None = None
     raw: str = ""
     notes: str = ""
+    server_s: float | None = None
+    gen_tokens: int | None = None
+    tokens_per_s: float | None = None
 
 
 @runtime_checkable

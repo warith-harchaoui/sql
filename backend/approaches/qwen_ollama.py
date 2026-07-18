@@ -15,7 +15,7 @@ from __future__ import annotations
 import time
 
 from .. import db
-from ..llm import MODEL_SQL, chat, is_up
+from ..llm import MODEL_SQL, LLMResult, chat, is_up
 from .base import ApproachUnavailable, SQLGeneration, clean_sql
 
 # Consigne système : on cadre fermement le modèle pour qu'il rende du SQLite
@@ -141,6 +141,11 @@ class QwenOllamaApproach:
             "Prompt maison (schéma + valeurs énumérées) → qwen2.5-coder via Ollama. "
             "L'approche la plus transparente : tout est visible."
         )
+        # Cumul des temps de calcul mesurés PAR OLLAMA (insensibles à la charge
+        # de la machine) : on additionne génération + éventuelle auto-correction.
+        server_s = result.server_total_s
+        eval_s = result.server_eval_s
+        tokens = result.eval_count
 
         # Auto-correction par execution feedback : on VALIDE le SQL en l'exécutant
         # (lecture seule, sûr) ; s'il échoue, on renvoie l'erreur au modèle pour un
@@ -148,11 +153,17 @@ class QwenOllamaApproach:
         if self.self_correct and sql:
             check = db.run_select(sql, max_rows=1)
             if not check.ok:
-                repaired, raw2 = self._repair(question, sql, check.error or "")
+                rep = self._repair(question, sql, check.error or "")
+                repaired = clean_sql(rep.content) if rep.ok else ""
                 # On ne garde la correction que si elle produit un SQL non vide.
                 if repaired:
-                    sql, raw = repaired, raw2
+                    sql, raw = repaired, rep.content
                     note += " ↻ Auto-corrigé après une erreur d'exécution."
+                # On compte le temps du réessai même s'il n'a pas « réussi ».
+                if rep.ok:
+                    server_s += rep.server_total_s
+                    eval_s += rep.server_eval_s
+                    tokens += rep.eval_count
 
         return SQLGeneration(
             sql=sql,
@@ -161,9 +172,13 @@ class QwenOllamaApproach:
             latency_s=time.perf_counter() - started,
             raw=raw,
             notes=note,
+            # Temps serveur Ollama + vitesse tokens/s (mesure propre du calcul).
+            server_s=server_s or None,
+            gen_tokens=tokens or None,
+            tokens_per_s=(tokens / eval_s) if eval_s > 0 else None,
         )
 
-    def _repair(self, question: str, bad_sql: str, error: str) -> tuple[str, str]:
+    def _repair(self, question: str, bad_sql: str, error: str) -> LLMResult:
         """Tente UNE correction du SQL en renvoyant l'erreur d'exécution au modèle.
 
         Parameters
@@ -177,8 +192,9 @@ class QwenOllamaApproach:
 
         Returns
         -------
-        (str, str)
-            ``(sql_corrigé, sortie_brute)`` ; ``("", "")`` si le réessai échoue.
+        LLMResult
+            La réponse brute du modèle (avec ses durées serveur) ; l'appelant
+            en extrait le SQL corrigé et cumule les temps de calcul.
         """
         # On rejoue le contexte + la requête fautive + l'erreur, et on demande un
         # correctif. Un seul tour : au-delà, le gain marginal chute vite.
@@ -193,8 +209,5 @@ class QwenOllamaApproach:
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": repair_user},
         ]
-        result = chat(messages, model=self.model, temperature=0.0)
-        # Échec réseau : on renonce à la correction (l'appelant garde l'original).
-        if not result.ok:
-            return "", ""
-        return clean_sql(result.content), result.content
+        # On renvoie le LLMResult complet (contenu + durées serveur).
+        return chat(messages, model=self.model, temperature=0.0)
