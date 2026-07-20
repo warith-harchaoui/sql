@@ -92,6 +92,8 @@ Les quatre approches comparées :
 
 **Quand l'utiliser** : gros schéma d'entreprise, besoin de capitaliser un few-shot métier, contrainte local-first — à condition de tenir le package à jour et d'isoler l'exécution.
 
+> ✅ **Mesuré dans ce dépôt** (échantillon 24 q) : en gonflant le DDL ×18 (`institut_wide.db`), le bon prompt QwenCoder chute **92 % → 46 %** tandis que Vanna 2 monte **83 % → 92 %** — le RAG passe devant. Voir README/LISEZMOI § « Small schema vs large schema / Petit schéma vs gros schéma ».
+
 > ⚠️ **Note de sécurité pour la démo** : à cause de l'historique de RCE de Vanna
 > (et par bonne hygiène générale), **cette démo n'exécute jamais le SQL depuis
 > les frameworks eux-mêmes**. Chaque approche se contente de *générer* la

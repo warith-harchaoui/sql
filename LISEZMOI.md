@@ -401,6 +401,42 @@ la vérifier à la main.**
 3. **LangChain est rapide mais peu sûr :** 103 erreurs sémantiques, de loin le plus,
    et aucune boucle de réparation. **La vitesse n'est pas la sûreté.**
 
+### Petit schéma vs gros schéma — l'inversion
+
+Tout ce qui précède tourne sur la base **LIGHT** (`institut.db`, 30 tables, DDL ~7 500 caractères —
+il *tient* dans le prompt). Que se passe-t-il quand le schéma ne tient plus ? `institut_wide.db`
+garde les **mêmes tables et colonnes-clés** et gonfle chaque table de ~130 colonnes de décor → DDL
+~132 000 caractères (**×18**). Le SQL de référence tourne toujours (colonnes-clés intactes) ; seule
+change la *taille vue par le modèle*.
+
+On a rejoué un **échantillon équilibré de 24 questions** (8 faciles / 8 moyennes / 8 difficiles, les
+*mêmes* sur les deux bases) sur les cinq configs. C'est un **petit échantillon indicatif** — pas
+l'étude 768 ci-dessus — donc on lit la *tendance*, pas la troisième décimale :
+
+| Config | Petit schéma | Gros schéma | Δ exactitude | Latence (petit → gros) |
+|---|---:|---:|---:|---|
+| 🟪 QwenCoder (prompt naïf) | 75 % | 54 % | −21 | 1,6 s → 29,8 s |
+| 🟦 **QwenCoder (bon prompt)** | **92 %** | 46 % | **−46** | 2,1 s → 51,5 s |
+| 🟩 LangChain | 67 % | 42 % | −25 | 2,0 s → 44,4 s |
+| 🟧 Vanna 1 (RAG) | 75 % | 75 % | **0** | 7,9 s → 26,9 s |
+| 🟥 **Vanna 2 (RAG)** | 83 % | **92 %** | **+8** | 7,9 s → 40,7 s |
+
+![Petit vs gros schéma — exactitude](docs/img/fr/bench-light-vs-heavy-accuracy.png)
+
+![Petit vs gros schéma — latence](docs/img/fr/bench-light-vs-heavy-latency.png)
+
+**Ce que disent les chiffres.** Les trois configs **à prompt** — qui collent *tout* le schéma dans le
+prompt — se dégradent quand le DDL déborde le contexte : le bon prompt QwenCoder chute **92 % →
+46 %** et sa latence explose **~×25** (2 s → 51 s). Les deux configs **RAG** (Vanna), qui *ne
+récupèrent que les tables pertinentes*, **tiennent** leur exactitude (Vanna 1 stable à 75 %, Vanna 2
+qui monte à 92 %) et restent **plus rapides** que les « prompt-stuffers » sur le gros schéma.
+
+Sur le gros schéma, le classement **s'inverse** donc : le prompt schéma-complet qui *menait* sur la
+petite base (92 %) est maintenant quasi dernier (46 %), et le RAG bien nourri (Vanna 2) mène (92 %).
+C'est exactement le mécanisme décrit dans [`PROS_CONS.md`](PROS_CONS.md) — désormais **mesuré**, plus
+seulement affirmé. Réserve honnête : échantillon de 24 questions ; la *tendance* est nette, les points
+exacts non.
+
 ### Lecture & limites
 
 1. **Même modèle, contexte différent → fiabilité différente.** Les cinq configs font

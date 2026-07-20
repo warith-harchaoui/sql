@@ -395,6 +395,41 @@ execution error (loud, catchable), 🟡 yellow is a semantic error (silent, dang
    repair loop. Its generic prompt never injects enumerated values. **Speed is not
    safety.**
 
+### Small schema vs large schema — the reversal
+
+Everything above runs on the **LIGHT** database (`institut.db`, 30 tables, DDL ~7.5k characters —
+it *fits* inside the prompt). What happens when the schema no longer fits? `institut_wide.db`
+keeps the **same tables and key columns** and pads each with ~130 decoy columns → DDL ~132k
+characters (**×18**). The reference SQL still runs (key columns intact); only the *size the model
+sees* changes.
+
+We re-ran a **balanced 24-question sample** (8 easy / 8 medium / 8 hard, the *same* questions on
+both databases) across the five configs. This is a **small, indicative sample** — not the
+768-query study above — so read the *direction*, not the third decimal:
+
+| Config | Small schema | Large schema | Δ accuracy | Latency (small → large) |
+|---|---:|---:|---:|---|
+| 🟪 QwenCoder (naive prompt) | 75 % | 54 % | −21 | 1.6 s → 29.8 s |
+| 🟦 **QwenCoder (good prompt)** | **92 %** | 46 % | **−46** | 2.1 s → 51.5 s |
+| 🟩 LangChain | 67 % | 42 % | −25 | 2.0 s → 44.4 s |
+| 🟧 Vanna 1 (RAG) | 75 % | 75 % | **0** | 7.9 s → 26.9 s |
+| 🟥 **Vanna 2 (RAG)** | 83 % | **92 %** | **+8** | 7.9 s → 40.7 s |
+
+![Small vs large schema — accuracy](docs/img/en/bench-light-vs-heavy-accuracy.png)
+
+![Small vs large schema — latency](docs/img/en/bench-light-vs-heavy-latency.png)
+
+**What the numbers say.** The three **prompt-based** configs — which paste the *whole* schema into
+the prompt — degrade when the DDL overflows the context: the good QwenCoder prompt falls **92 % →
+46 %** and its latency explodes **~25×** (2 s → 51 s). The two **RAG** configs (Vanna), which
+*retrieve only the relevant tables*, **hold** their accuracy (Vanna 1 flat at 75 %, Vanna 2 rising
+to 92 %) and stay **faster** than the prompt-stuffers on the large schema.
+
+So on the large schema the ranking **flips**: the whole-schema prompt that *led* on the small
+database (92 %) is now near-last (46 %), and the well-fed RAG (Vanna 2) leads (92 %). This is
+exactly the mechanism [`PROS_CONS.md`](PROS_CONS.md) describes — now **measured**, not asserted.
+Honest caveat: it is a 24-question sample; the *direction* is unambiguous, the exact points are not.
+
 ### Takeaways & limits
 
 1. **Same model, different context → different reliability.** All five run
@@ -410,9 +445,10 @@ execution error (loud, catchable), 🟡 yellow is a semantic error (silent, dang
    query is complex.
 4. **But full context still edges out retrieval overall on a small schema.** Even in
    a fair fight (both self-correct), QwenCoder's whole-schema prompt (90.6 %) stays
-   ahead of Vanna 2 (88.3 %) on easy/medium. On a real database (thousands of columns
-   that *cannot* fit a prompt) the ranking flips and RAG becomes necessary — see
-   [`PROS_CONS.md`](PROS_CONS.md).
+   ahead of Vanna 2 (88.3 %) on easy/medium. But on a database whose schema *cannot* fit a
+   prompt the ranking flips and RAG becomes necessary — **now measured** just above
+   (*Small schema vs large schema*): the good prompt falls **92 % → 46 %** while Vanna 2 rises
+   **83 % → 92 %** when the DDL is inflated ×18.
 5. **Speed ≠ safety, and quality has a price.** LangChain is fastest and least safe
    (103 silent errors, 67 % on hard). Vanna 2 is the most accurate on hard but the
    **slowest** (6 s median) — self-correction fires a second generation on every
