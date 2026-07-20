@@ -144,7 +144,7 @@ by Vanna's RCE history, see `PROS_CONS.md`.)
 - **The models** (pulled automatically by `start.sh`, or by hand):
   ```bash
   ollama pull qwen2.5-coder       # SQL generation
-  ollama pull gemma4:e4b          # figure choice (or a gemma variant you already have)
+  ollama pull gemma4:e4b-mlx          # figure choice (or a gemma variant you already have)
   ollama pull nomic-embed-text    # embeddings for Vanna's RAG
   ```
 
@@ -233,6 +233,8 @@ information you put in the context**.
   direct measure of "what a good prompt is worth".
 - **Vanna 2 vs Vanna 1**: same RAG framework, only the training changes → a direct
   measure of "what a well-fed RAG is worth".
+
+> Note: the interactive web demo runs **Vanna 1** (basic RAG). **Vanna 2** (rich schema context, examples and self-correction) is a benchmark configuration, measured in the results below.
 
 ```mermaid
 flowchart LR

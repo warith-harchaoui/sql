@@ -867,7 +867,7 @@ def render_lightheavy(
 
 
 def render_all(report: dict | None = None, langs: tuple[str, ...] = ("fr", "en")) -> list[Path]:
-    """Rend les trois figures en PNG, pour chaque langue, et renvoie leurs chemins.
+    """Rend les quatre figures en PNG, pour chaque langue, et renvoie leurs chemins.
 
     Parameters
     ----------

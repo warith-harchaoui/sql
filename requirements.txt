@@ -14,7 +14,7 @@ pydantic>=2.6          # modèles de requête/réponse de l'API
 langdetect>=1.0        # détection de la langue de la question (fr/en) affichée dans le front
 pyyaml>=6.0            # source de vérité i18n (GUI + prompts) : locales/i18n.yaml
 
-# Approche 1 — LangChain (« toolbox connue »). Optionnel : sans ces paquets,
+# Approche 2 — LangChain (« toolbox connue »). Optionnel : sans ces paquets,
 # l'approche se déclare simplement indisponible dans le front.
 langchain>=0.2
 langchain-community>=0.2

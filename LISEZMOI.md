@@ -149,7 +149,7 @@ défensif. (Motivé notamment par l'historique de RCE de Vanna, cf. `PROS_CONS.m
 - **Les modèles** (tirés automatiquement par `start.sh`, ou à la main) :
   ```bash
   ollama pull qwen2.5-coder       # génération SQL
-  ollama pull gemma4:e4b          # choix des figures (ou une variante gemma déjà présente)
+  ollama pull gemma4:e4b-mlx          # choix des figures (ou une variante gemma déjà présente)
   ollama pull nomic-embed-text    # embeddings pour le RAG de Vanna
   ```
 
@@ -234,6 +234,8 @@ porte le sens du moteur :
 | 🟩 **LangChain** | qwen2.5-coder | la toolbox charge le schéma et prompte le LLM à sa façon (sans auto-correction) |
 | 🟧 **Vanna 1** | qwen2.5-coder | RAG légèrement entraîné : DDL + quelques docs + 4 exemples + **auto-correction** |
 | 🟥 **Vanna 2** | qwen2.5-coder | RAG avec la **même info décisive** que le bon prompt (valeurs énumérées) + 15 exemples + **auto-correction** |
+
+> Note : la démo web interactive utilise **Vanna 1** (RAG simple). **Vanna 2** (contexte de schéma enrichi, exemples et auto-correction) est une configuration du benchmark, mesurée dans les résultats ci-dessous.
 
 Deux paires de témoins, **une seule leçon** : ce qui compte, ce n'est pas la boîte,
 c'est **l'information qu'on met dans le contexte**.
@@ -579,6 +581,6 @@ L'interface vise **WCAG 2.1 AA**, vérifié avec l'outillage front du projet :
 
 - Ce dépôt suit un **standard de code** strict (docstrings numpy, typage,
   commentaires abondants, tests, éval, Ruff/PEP 8) — voir `CODING.md`.
-- Le client Ollama a été copier-coller de manière simplifiée du framework 
+- Le client Ollama a été copié-collé de manière simplifiée du framework
   [`roitelet`](https://github.com/warith-harchaoui/roitelet) de l'auteur.
 

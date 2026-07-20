@@ -61,7 +61,7 @@ print(gen.sql)
 
 result = db.run_select(gen.sql, max_rows=5)
 print(result.columns, result.rows[0])
-# ['localisation', 'nombre_patients'] ['Rein', 47]
+# ['localisation', 'n'] ['Rein', 47]  # alias 'n' (AS n) ; peut varier selon le modèle
 ```
 
 ### 3b. LangChain — the well-known toolbox
@@ -149,7 +149,7 @@ curl -s localhost:8000/api/figure \
 
 ```bash
 python -m eval.run_eval --approach qwen
-# Exactitude d'exécution : 90% (9/10)  | seuil 60%  => PASS
+# Exactitude d'exécution : 100% (10/10)  | seuil 60%  => PASS
 
 python -m eval.run_eval --approach vanna --threshold 0.7
 ```
