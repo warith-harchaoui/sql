@@ -15,27 +15,13 @@ from __future__ import annotations
 import time
 
 from .. import db
-from ..llm import MODEL_SQL, LLMResult, chat, is_up
+from ..llm import MODEL_SQL, LLMResult, chat, detect_language, is_up
+from ..prompts import sql_naive, sql_system
 from .base import ApproachUnavailable, SQLGeneration, clean_sql
 
-# Consigne système : on cadre fermement le modèle pour qu'il rende du SQLite
-# valide, en lecture seule, sans bavardage. Le ton impératif limite les
-# préambules (« Bien sûr, voici... ») qui polluent l'extraction.
-SYSTEM_PROMPT = """Tu es un expert SQL. Tu traduis des questions en français \
-en requêtes SQL pour SQLite.
-Règles STRICTES :
-- Réponds UNIQUEMENT par la requête SQL, sans explication, sans Markdown, sans point-virgule final.
-- Utilise exclusivement les tables et colonnes du schéma fourni.
-- Génère du SQL valide pour SQLite (fonctions date : strftime, etc.).
-- Requêtes en LECTURE SEULE (SELECT). Jamais d'INSERT/UPDATE/DELETE/DROP.
-- Quand la question implique un agrégat, utilise GROUP BY et des alias lisibles.
-- Limite à 200 lignes maximum sauf si la question demande explicitement tout.
-"""
-
-# Consigne système « naïve » : volontairement minimale, pour la démonstration
-# « un bon prompt, ça joue ». Aucune règle, aucun cadrage : c'est le point de
-# départ paresseux qu'on compare au prompt soigné ci-dessus.
-NAIVE_SYSTEM = "Écris une requête SQL qui répond à la question. Réponds par le SQL."
+# Les consignes système (« soignée » et « naïve ») ne sont PLUS en dur ici : elles
+# vivent dans locales/i18n.yaml et sont chargées par ``backend.prompts``, dans la
+# langue de la question (détectée). Voir ``_system_for``.
 
 
 class QwenOllamaApproach:
@@ -117,8 +103,10 @@ class QwenOllamaApproach:
             f"Question : {question}\n\n"
             "Requête SQL SQLite (SELECT uniquement) :"
         )
-        # Le prompt naïf utilise la consigne minimale ; le bon prompt, la stricte.
-        system = NAIVE_SYSTEM if self.naive else SYSTEM_PROMPT
+        # Consigne système chargée du YAML, DANS LA LANGUE de la question détectée
+        # (fr/en) : naïve si mode témoin, soignée sinon.
+        lang = detect_language(question)
+        system = sql_naive(lang) if self.naive else sql_system(lang)
         return [
             {"role": "system", "content": system},
             {"role": "user", "content": user},
@@ -227,7 +215,7 @@ class QwenOllamaApproach:
             "Corrige la requête. Réponds UNIQUEMENT par le SQL corrigé."
         )
         messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": sql_system(detect_language(question))},
             {"role": "user", "content": repair_user},
         ]
         # On renvoie le LLMResult complet (contenu + durées serveur).

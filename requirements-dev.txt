@@ -1,0 +1,19 @@
+# requirements-dev.txt — outillage de développement, test et CI.
+#
+# Séparé du « main » (requirements.txt) : ces paquets ne sont PAS nécessaires pour
+# faire tourner la démo, seulement pour la développer, la tester et régénérer les
+# captures. La CI installe ce fichier (+ le cœur applicatif léger) pour la suite
+# rapide — voir .github/workflows/ci.yml.
+#
+# Installation dev complète :
+#     pip install -r requirements.txt -r requirements-dev.txt
+
+pytest>=8.0            # framework de tests
+pytest-cov>=5.0        # couverture de code
+ruff>=0.5             # lint + format (PEP 8) — garde bloquante en CI
+httpx>=0.27            # requis par fastapi.testclient dans les tests d'API
+
+# Régénération des captures d'écran et validation visuelle (front, figures).
+# Uniquement pour reconstruire docs/screenshots et docs/img — pas requis en CI.
+# Après installation : `python -m playwright install chromium` (ou canal `chrome`).
+playwright>=1.44

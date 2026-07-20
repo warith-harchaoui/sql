@@ -191,6 +191,103 @@ print(report.score)                    # e.g. 0.83
 
 ---
 
+## 6b. Full numerical benchmark (latency + speed + accuracy)
+
+Balanced **768-query** set (256 easy / 256 medium / 256 hard), five configs
+(same LLM `qwen2.5-coder` everywhere), noise-robust latency + Ollama compute time.
+
+```bash
+python -m eval.benchmark --repeats 1   # writes eval/benchmark_results.json (incremental)
+python -m eval.bench_charts            # writes bilingual PNGs in docs/img/{fr,en}/
+```
+
+Add just one config to an existing report (merges by key — no full re-run):
+
+```bash
+python -m eval.benchmark --approaches vanna_plus   # runs "Vanna 2", merges in
+```
+
+The **well-fed Vanna** (Vanna 2) is trained with the enumerated column values +
+more example pairs — a fair-context comparison against QwenCoder's good prompt:
+
+```python
+from backend.approaches.vanna_rag import VannaApproach
+vn2 = VannaApproach(rich=True)          # name == "Vanna 2"
+print(vn2.generate("Combien de factures sont impayées ?").sql)
+```
+
+## 6c. Language detection & i18n (YAML source of truth)
+
+Question language is detected server-side and returned by `/api/query`:
+
+```python
+from backend.llm import detect_language
+print(detect_language("Combien de patients par sexe ?"))   # fr
+print(detect_language("How many patients by sex?"))        # en
+```
+
+All UI strings **and** LLM prompts live in `locales/i18n.yaml` (edit there to
+translate). The server exposes the GUI strings as JSON:
+
+```bash
+curl -s localhost:8000/api/i18n | python -m json.tool   # {"gui": {"en": {...}, "fr": {...}}}
+```
+
+```python
+from backend import prompts
+print(prompts.sql_system("en")[:40])    # English system prompt from the YAML
+print(prompts.figure_system("fr")[:40]) # French figure prompt from the YAML
+```
+
+## 6d. Small schema vs large schema — the ranking reversal
+
+The whole point of RAG is a schema too big to fit in a prompt. To *measure* it,
+build a **HEAVY** copy of the database: same tables, same key columns, same data,
+but each table padded with ~130 realistic **decoy** columns (audit / GDPR / legacy
+fields, all `NULL`). Only the **DDL size** the LLM sees changes — from ~7.5k to
+~132k characters (×18) — so the reference SQL still runs unchanged.
+
+```bash
+python -m backend.widen_db                       # writes data/institut_wide.db
+```
+
+Run the same question set on both databases (a small per-tier sample: on HEAVY the
+giant prompt makes generation slow, ~100 s/query for schema-in-prompt approaches):
+
+```bash
+python -m eval.benchmark --per-level 8 --out eval/benchmark_light_sample.json
+python -m eval.benchmark --per-level 8 --db data/institut_wide.db \
+                         --out eval/benchmark_heavy_sample.json
+```
+
+Then render the two comparison figures (accuracy + latency, faceted by regime):
+
+```python
+from pathlib import Path
+from eval.bench_charts import render_lightheavy
+render_lightheavy(Path("eval/benchmark_light_sample.json"),
+                  Path("eval/benchmark_heavy_sample.json"))   # docs/img/{fr,en}/bench-light-vs-heavy-*.png
+```
+
+On **LIGHT**, QwenCoder (whole schema in the prompt) leads; on **HEAVY**, the
+prompt overflows and the retrieval-based Vanna moves ahead — the reversal that
+justifies RAG. See the "Small schema vs large schema" section of the README.
+
+## 6e. Explore the data with skrub (companion EDA)
+
+A pedagogical profile of the hospital tables the LLM queries — `skrub.TableReport`
+gives types, missing values, cardinalities and distributions with zero plotting code.
+This is *not* part of the text2SQL pipeline (no sklearn model): it's a data-understanding
+aid.
+
+```bash
+python -m backend.eda_report                     # docs/eda/*.html for illustrative tables
+python -m backend.eda_report --all               # every table
+python -m backend.eda_report --tables patients factures
+```
+
+---
+
 ## 7. Run the tests
 
 ```bash

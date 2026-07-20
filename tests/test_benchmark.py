@@ -14,7 +14,7 @@ import pytest
 from backend.db import run_select
 from eval import bench_charts
 from eval.benchmark import _percentile, summarize
-from eval.benchmark_set import BENCH
+from eval.benchmark_set import BENCH, balanced_bench
 
 
 def test_bench_reference_sql_all_execute(db_path):
@@ -26,11 +26,26 @@ def test_bench_reference_sql_all_execute(db_path):
 
 
 def test_bench_has_three_difficulty_tiers():
-    """Le grand jeu couvre bien les trois paliers de difficulté, en volume."""
+    """Le grand jeu curaté couvre bien les trois paliers de difficulté."""
     niveaux = {c.difficulte for c in BENCH}
     assert niveaux == {"facile", "moyen", "difficile"}
-    # « Beaucoup d'exemples » : au moins 40 cas.
     assert len(BENCH) >= 40
+
+
+def test_balanced_bench_is_256_each_and_executes(db_path):
+    """Le jeu ÉQUILIBRÉ fournit 256 cas par palier, tous exécutables."""
+    from collections import Counter
+
+    bench = balanced_bench(256)
+    # 3 × 256 = 768 requêtes, réparties exactement à parts égales.
+    counts = Counter(c.difficulte for c in bench)
+    assert counts["facile"] == 256
+    assert counts["moyen"] == 256
+    assert counts["difficile"] == 256
+    # Tous les SQL de référence s'exécutent (échantillon suffisant : les durs).
+    hard = [c for c in bench if c.difficulte == "difficile"]
+    for case in hard[:30]:
+        assert run_select(case.sql_ref).ok is True, f"{case.id}: {case.sql_ref}"
 
 
 @pytest.mark.parametrize(
@@ -138,6 +153,7 @@ def test_build_specs_are_valid_vega_lite():
     # Chaque builder doit renvoyer une spec v5 avec des données et un encodage/couche.
     for builder in (
         bench_charts.build_violin_spec,
+        bench_charts.build_errors_spec,
         bench_charts.build_accuracy_spec,
         bench_charts.build_scatter_spec,
     ):

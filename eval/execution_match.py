@@ -142,7 +142,12 @@ def compare_results(gen: QueryResult, ref: QueryResult, ordered: bool = False) -
     return MatchResult(False, "Résultats différents.", gen.row_count, ref.row_count)
 
 
-def evaluate_sql(generated_sql: str, sql_ref: str, ordered: bool = False) -> MatchResult:
+def evaluate_sql(
+    generated_sql: str,
+    sql_ref: str,
+    ordered: bool = False,
+    db_path: object = None,
+) -> MatchResult:
     """Exécute les deux requêtes et compare leurs résultats.
 
     Parameters
@@ -153,17 +158,24 @@ def evaluate_sql(generated_sql: str, sql_ref: str, ordered: bool = False) -> Mat
         SQL de référence correct.
     ordered : bool
         L'ordre des lignes est-il significatif ?
+    db_path : object, optional
+        Base sur laquelle exécuter les DEUX requêtes (généré et référence). Par
+        défaut la base de la démo. Sert à cibler la base HEAVY (gros schéma) sans
+        changer le jeu : l'exactitude d'exécution reste valide car les deux côtés
+        tournent sur la même base.
 
     Returns
     -------
     MatchResult
         Le verdict d'équivalence d'exécution.
     """
+    # ``run_select`` accepte le chemin par défaut si ``db_path`` est None.
+    kwargs = {"db_path": db_path} if db_path is not None else {}
     # Requête vide générée : échec immédiat, sans toucher la base.
     if not generated_sql.strip():
-        ref = run_select(sql_ref)
+        ref = run_select(sql_ref, **kwargs)
         return MatchResult(False, "Aucun SQL généré.", -1, ref.row_count)
     # On exécute les deux côtés via le même garde-fou lecture seule.
-    gen = run_select(generated_sql)
-    ref = run_select(sql_ref)
+    gen = run_select(generated_sql, **kwargs)
+    ref = run_select(sql_ref, **kwargs)
     return compare_results(gen, ref, ordered=ordered)

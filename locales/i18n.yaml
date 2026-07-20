@@ -1,0 +1,145 @@
+# =============================================================================
+# i18n.yaml — SOURCE DE VÉRITÉ des chaînes traduites (GUI + prompts LLM).
+#
+# Tout le texte visible du front ET les consignes système des modèles vivent ICI,
+# pas en dur dans le code (ni JS, ni Python). Le serveur charge ce fichier
+# (backend/prompts.py), l'expose au front en JSON (/api/i18n) et le fournit aux
+# approches. Pour ajouter/traduire une chaîne : on édite ce YAML, un point.
+#
+# Conventions (cf. l'i18n de roitelet) :
+#   - clés en notation pointée, groupées par écran/fonction ;
+#   - on traduit le SENS, pas mot à mot ;
+#   - verbes à l'impératif pour les boutons ; erreurs orientées « quoi faire » ;
+#   - substitution {nom} côté code (t(key, vars)).
+# =============================================================================
+
+# --- Chaînes de l'interface web (exposées au front via /api/i18n) -----------
+gui:
+  en:
+    app.subtitle: "Natural language → SQL, three approaches, 100% local (Ollama)"
+    theme.toggle: "Toggle light/dark theme"
+    lang.toggle: "Français"
+    question.label: "Ask your question (in French)"
+    question.placeholder: "e.g. Revenue collected per month in 2026"
+    approach.group: "Approach selector"
+    approach.all: "All"
+    run: "Run"
+    examples.heading: "Click an example"
+    how.heading: "How it works?"
+    how.qwen: '<b>QwenCoder (raw)</b> — we paste the schema + the question into a hand-written prompt and call <code>qwen2.5-coder</code>. No framework: everything is visible.'
+    how.langchain: '<b>LangChain</b> — <code>create_sql_query_chain</code> introspects the DB and prompts the LLM for you. Concise, but more of a black box.'
+    how.vanna: '<b>Vanna (RAG)</b> — you "train" an index (schema + business knowledge + examples); at query time only the relevant context is retrieved. Ideal for large schemas.'
+    how.figures: '<b>Figures</b> — <code>gemma4</code> picks the visualization; we render it as Vega-Lite. LLM-generated code is never executed.'
+    how.security: 'Read-only SQL execution (single SELECT, DB opened <code>mode=ro</code>). See <code>PROS_CONS.md</code>.'
+    schema.summary: "Database schema ({n} tables)"
+    footer: "Teaching demo — 100% fake data. No data leaves the machine."
+    loading: "Generating (local models may take a few seconds)…"
+    detected: "Detected language: {lang}"
+    gen.choosing: "Gemma is choosing a visualization…"
+    figure.button: "📊 Generate a figure (Gemma)"
+    figure.none: "No figure: {reason}."
+    figure.error: "Figure error: {msg}"
+    figure.norelevant: "not relevant"
+    rawoutput: "Raw model output"
+    rows: "{n} row(s)"
+    truncated: " (truncated)"
+    rows.more: "… {n} more rows not shown."
+    nocolumn: "No column."
+    unavailable: "unavailable"
+    genfailed: "Generation failed: {err}"
+    execerror: "Execution error: {err}"
+    error: "Error: {msg}"
+    api.down: "API unreachable"
+    table.caption: "Query results: {n} row(s), columns {cols}."
+  fr:
+    app.subtitle: "Langage naturel → SQL, trois approches, 100 % local (Ollama)"
+    theme.toggle: "Basculer le thème clair/sombre"
+    lang.toggle: "English"
+    question.label: "Pose ta question en français"
+    question.placeholder: "Ex. : Chiffre d'affaires encaissé par mois en 2026"
+    approach.group: "Choix de l'approche"
+    approach.all: "Toutes"
+    run: "Exécuter"
+    examples.heading: "Exemples à cliquer"
+    how.heading: "Comment ça marche&nbsp;?"
+    how.qwen: '<b>QwenCoder (brut)</b> — on colle le schéma + la question dans un prompt maison et on appelle <code>qwen2.5-coder</code>. Zéro framework : tout est visible.'
+    how.langchain: '<b>LangChain</b> — <code>create_sql_query_chain</code> introspecte la base et prompte le LLM pour toi. Concis, mais plus « boîte noire ».'
+    how.vanna: '<b>Vanna (RAG)</b> — on « entraîne » un index (schéma + savoir métier + exemples) ; à l''exécution, seul le contexte pertinent est récupéré. Idéal gros schéma.'
+    how.figures: '<b>Figures</b> — <code>gemma4</code> choisit la visualisation ; on la rend en Vega-Lite. On n''exécute jamais de code produit par un LLM.'
+    how.security: 'Exécution SQL en lecture seule stricte (SELECT unique, base ouverte en <code>mode=ro</code>). Voir <code>PROS_CONS.md</code>.'
+    schema.summary: "Schéma de la base ({n} tables)"
+    footer: "Démo pédagogique — données 100 % fictives. Aucune donnée ne quitte la machine."
+    loading: "Génération en cours (les modèles locaux peuvent prendre quelques secondes)…"
+    detected: "Langue détectée : {lang}"
+    gen.choosing: "Gemma choisit une visualisation…"
+    figure.button: "📊 Générer une figure (Gemma)"
+    figure.none: "Pas de figure : {reason}."
+    figure.error: "Erreur figure : {msg}"
+    figure.norelevant: "non pertinent"
+    rawoutput: "Sortie brute du modèle"
+    rows: "{n} ligne(s)"
+    truncated: " (tronqué)"
+    rows.more: "… {n} lignes supplémentaires non affichées."
+    nocolumn: "Aucune colonne."
+    unavailable: "indisponible"
+    genfailed: "Échec de génération : {err}"
+    execerror: "Erreur d'exécution : {err}"
+    error: "Erreur : {msg}"
+    api.down: "API injoignable"
+    table.caption: "Résultats de la requête : {n} ligne(s), colonnes {cols}."
+
+# --- Consignes système des modèles (chargées par les approches) -------------
+# Elles sont bilingues : l'approche choisit la langue selon la question détectée.
+prompts:
+  # Prompt SQL « soigné » : cadrage strict, SELECT lecture seule, alias lisibles.
+  sql_system:
+    fr: |
+      Tu es un expert SQL. Tu traduis des questions en requêtes SQL pour SQLite.
+      Règles STRICTES :
+      - Réponds UNIQUEMENT par la requête SQL, sans explication, sans Markdown, sans point-virgule final.
+      - Utilise exclusivement les tables et colonnes du schéma fourni.
+      - Génère du SQL valide pour SQLite (fonctions date : strftime, etc.).
+      - Requêtes en LECTURE SEULE (SELECT). Jamais d'INSERT/UPDATE/DELETE/DROP.
+      - Quand la question implique un agrégat, utilise GROUP BY et des alias lisibles.
+      - Limite à 200 lignes maximum sauf si la question demande explicitement tout.
+    en: |
+      You are a SQL expert. You translate questions into SQL queries for SQLite.
+      STRICT rules:
+      - Reply with the SQL query ONLY: no explanation, no Markdown, no trailing semicolon.
+      - Use only the tables and columns from the provided schema.
+      - Produce valid SQLite SQL (date functions: strftime, etc.).
+      - READ-ONLY queries (SELECT). Never INSERT/UPDATE/DELETE/DROP.
+      - When the question implies an aggregate, use GROUP BY with readable aliases.
+      - Limit to 200 rows unless the question explicitly asks for everything.
+  # Prompt « naïf » : volontairement minimal (témoin « un bon prompt, ça joue »).
+  sql_naive:
+    fr: "Écris une requête SQL qui répond à la question. Réponds par le SQL."
+    en: "Write a SQL query that answers the question. Reply with the SQL."
+  # Prompt de choix de figure (Gemma) : renvoie une spec JSON dans un menu fermé.
+  figure_system:
+    fr: |
+      Tu es un assistant de data-visualisation. On te donne une question, les colonnes
+      d'un résultat SQL et un échantillon de lignes. Choisis LA meilleure figure et
+      réponds UNIQUEMENT par un objet JSON valide, sans Markdown, avec les clés :
+        "chart_type": un de ["bar","line","pie","scatter","hist","none"],
+        "x": nom exact de la colonne des abscisses (ou catégories),
+        "y": nom exact de la colonne des valeurs numériques (ou null),
+        "title": titre court en français,
+        "rationale": une phrase expliquant le choix.
+      Règles : "line" pour une évolution temporelle ; "bar" pour comparer des catégories ;
+      "pie" seulement si peu de catégories (<8) qui somment à un tout ; "hist" pour une
+      distribution d'une variable ; "scatter" pour deux variables numériques ;
+      "none" si aucune figure n'a de sens. Utilise EXACTEMENT les noms de colonnes fournis.
+    en: |
+      You are a data-visualization assistant. Given a question, the columns of a SQL
+      result and a sample of rows, pick THE best figure and reply ONLY with a valid JSON
+      object, no Markdown, with keys:
+        "chart_type": one of ["bar","line","pie","scatter","hist","none"],
+        "x": exact name of the x-axis column (or categories),
+        "y": exact name of the numeric-values column (or null),
+        "title": a short title,
+        "rationale": one sentence explaining the choice.
+      Rules: "line" for a time trend; "bar" to compare categories; "pie" only if few
+      categories (<8) summing to a whole; "hist" for a variable's distribution;
+      "scatter" for two numeric variables; "none" if no figure makes sense. Use EXACTLY
+      the provided column names.

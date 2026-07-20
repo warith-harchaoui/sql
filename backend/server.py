@@ -25,7 +25,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import db, figures
+from . import db, figures, prompts
 from .approaches.base import ApproachUnavailable, SQLGeneration
 from .approaches.langchain_sql import LangChainApproach
 from .approaches.qwen_ollama import QwenOllamaApproach
@@ -241,6 +241,16 @@ def schema() -> dict:
 def samples() -> dict:
     """Renvoie la liste des questions d'exemple, groupées par domaine."""
     return {"samples": SAMPLE_QUESTIONS}
+
+
+@app.get("/api/i18n")
+def i18n() -> dict:
+    """Renvoie les chaînes traduites de l'interface (source : locales/i18n.yaml).
+
+    Le front récupère ce dict et bascule fr/en sans qu'aucune chaîne ne soit
+    codée en dur dans le JavaScript.
+    """
+    return {"gui": prompts.gui_strings()}
 
 
 @app.post("/api/query")

@@ -28,7 +28,7 @@ from backend.approaches.langchain_sql import LangChainApproach
 from backend.approaches.qwen_ollama import QwenOllamaApproach
 from backend.approaches.vanna_rag import VannaApproach
 
-from .benchmark_set import large_bench
+from .benchmark_set import balanced_bench, large_bench
 from .execution_match import evaluate_sql
 
 logger = logging.getLogger(__name__)
@@ -39,10 +39,14 @@ logger = logging.getLogger(__name__)
 # ``qwen_naive`` (schéma nu, sans valeurs ni auto-correction) servent à montrer
 # qu'un bon prompt change tout.
 _APPROACHES: dict[str, tuple] = {
-    "qwen": (QwenOllamaApproach, "QwenCoder (bon prompt)"),
-    "qwen_naive": (lambda: QwenOllamaApproach(naive=True), "QwenCoder (prompt naïf)"),
-    "langchain": (LangChainApproach, "LangChain"),
-    "vanna": (VannaApproach, "Vanna (RAG)"),
+    "qwen": (lambda db_path=None: QwenOllamaApproach(db_path=db_path), "QwenCoder (bon prompt)"),
+    "qwen_naive": (
+        lambda db_path=None: QwenOllamaApproach(db_path=db_path, naive=True),
+        "QwenCoder (prompt naïf)",
+    ),
+    "langchain": (lambda db_path=None: LangChainApproach(db_path=db_path), "LangChain"),
+    "vanna": (lambda db_path=None: VannaApproach(db_path=db_path), "Vanna 1"),
+    "vanna_plus": (lambda db_path=None: VannaApproach(db_path=db_path, rich=True), "Vanna 2"),
 }
 
 # Chemin par défaut des résultats (consommés par les graphiques).
@@ -81,7 +85,7 @@ def _percentile(values: list[float], pct: float) -> float:
     return ordered[low] * (1 - frac) + ordered[high] * frac
 
 
-def run_one_approach(key: str, dataset: list, repeats: int = 3) -> dict:
+def run_one_approach(key: str, dataset: list, repeats: int = 3, db_path: object = None) -> dict:
     """Fait tourner une approche sur ``dataset`` et collecte les mesures.
 
     Chaque requête est générée ``repeats`` fois ; on garde le **minimum** de
@@ -99,6 +103,10 @@ def run_one_approach(key: str, dataset: list, repeats: int = 3) -> dict:
         Les cas (``GoldenCase``) à évaluer.
     repeats : int
         Nombre de répétitions par requête (on garde le min de latence).
+    db_path : object, optional
+        Base ciblée (LIGHT par défaut, ou HEAVY pour l'étude « gros schéma »).
+        Elle est passée à l'approche (schéma vu par le LLM) ET à l'évaluation
+        (exécution du généré et de la référence).
 
     Returns
     -------
@@ -107,9 +115,10 @@ def run_one_approach(key: str, dataset: list, repeats: int = 3) -> dict:
         où chaque record est une mesure par requête.
     """
     cls, label = _APPROACHES[key]
-    # Instanciation : peut échouer proprement (dépendance/serveur absents).
+    # Instanciation : peut échouer proprement (dépendance/serveur absents). On
+    # passe la base ciblée : l'approche construit son schéma/RAG sur CETTE base.
     try:
-        approach = cls()
+        approach = cls(db_path)
     except ApproachUnavailable as exc:
         return {"key": key, "label": label, "available": False, "error": str(exc), "records": []}
 
@@ -133,7 +142,7 @@ def run_one_approach(key: str, dataset: list, repeats: int = 3) -> dict:
                 tps_values.append(gen.tokens_per_s)
         # Le SQL est déterministe (température 0) : le verdict est stable ; on
         # évalue la dernière génération.
-        verdict = evaluate_sql(gen.sql, case.sql_ref, ordered=case.ordered)
+        verdict = evaluate_sql(gen.sql, case.sql_ref, ordered=case.ordered, db_path=db_path)
         # Type d'échec pour l'analyse : « ok », « exec » (SQL invalide) ou
         # « semantique » (SQL valide mais mauvais résultat — l'erreur silencieuse).
         exec_ok = verdict.gen_rows != -1
@@ -242,7 +251,14 @@ def summarize(result: dict) -> dict:
     return summary
 
 
-def run_benchmark(keys: list[str], out_path: Path = DEFAULT_OUT, repeats: int = 3) -> dict:
+def run_benchmark(
+    keys: list[str],
+    out_path: Path = DEFAULT_OUT,
+    repeats: int = 3,
+    merge: bool = True,
+    db_path: object = None,
+    per_level: int | None = None,
+) -> dict:
     """Exécute le benchmark pour les approches demandées et écrit le JSON.
 
     Parameters
@@ -253,6 +269,18 @@ def run_benchmark(keys: list[str], out_path: Path = DEFAULT_OUT, repeats: int = 
         Où écrire les résultats bruts + résumés (consommés par les figures).
     repeats : int
         Répétitions par requête (min de latence retenu) — robustesse au bruit.
+    merge : bool
+        Si vrai et qu'un rapport existe déjà, on CONSERVE les approches qui ne
+        sont pas re-lancées (fusion par clé) : on peut ainsi ajouter une seule
+        approche (ex. ``vanna_plus``) sans re-mesurer les autres.
+    db_path : object, optional
+        Base ciblée. LIGHT (défaut) ou HEAVY (gros schéma) pour l'étude de
+        l'inversion du classement. Le JEU de questions reste identique — seule la
+        base sur laquelle le schéma est lu et le SQL exécuté change.
+    per_level : int | None
+        Si fourni, on n'utilise qu'un ÉCHANTILLON de ``per_level`` cas par palier
+        (facile/moyen/difficile). Indispensable sur HEAVY : le prompt géant y rend
+        la génération lente, on ne lance donc pas les 768 cas complets.
 
     Returns
     -------
@@ -261,27 +289,51 @@ def run_benchmark(keys: list[str], out_path: Path = DEFAULT_OUT, repeats: int = 
     """
     approaches_raw: list[dict] = []
     summaries: list[dict] = []
-    # Le grand jeu (~500) est construit UNE fois et partagé par toutes les
-    # approches — comparaison à jeu identique.
-    dataset = large_bench()
+    # Fusion : on repart des approches déjà mesurées dont la clé n'est PAS relancée.
+    if merge and out_path.is_file():
+        try:
+            prev = json.loads(out_path.read_text(encoding="utf-8"))
+            approaches_raw = [a for a in prev.get("approaches", []) if a.get("key") not in keys]
+            summaries = [s for s in prev.get("summaries", []) if s.get("key") not in keys]
+            if approaches_raw:
+                logger.info("Fusion : on conserve %s", [a["key"] for a in approaches_raw])
+        except Exception:
+            # Fichier illisible : on repart de zéro plutôt que de planter.
+            approaches_raw, summaries = [], []
+    # Le jeu est construit UNE fois (sur la base LIGHT, toujours) et partagé par
+    # toutes les approches — comparaison à jeu identique. Un échantillon par
+    # palier est utilisé si ``per_level`` est fourni (cas HEAVY, prompt lent).
+    dataset = balanced_bench(per_level) if per_level else large_bench()
     logger.info("Jeu : %d requêtes", len(dataset))
+
+    def _write() -> dict:
+        """Écrit l'état COURANT du rapport sur disque et le renvoie.
+
+        Écriture INCRÉMENTALE (après chaque approche) : si le run est interrompu,
+        les approches déjà terminées sont conservées plutôt que tout perdre.
+        """
+        report = {
+            "n_cases": len(dataset),
+            "repeats": repeats,
+            "approaches": approaches_raw,
+            "summaries": summaries,
+        }
+        out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+        return report
+
+    report: dict = {"n_cases": len(dataset), "repeats": repeats, "approaches": [], "summaries": []}
     # Séquentiel : on veut des latences propres, pas de contention GPU/CPU.
     for key in keys:
         logger.info("=== Approche %s (repeats=%d) ===", key, repeats)
-        res = run_one_approach(key, dataset, repeats=repeats)
+        res = run_one_approach(key, dataset, repeats=repeats, db_path=db_path)
         approaches_raw.append(res)
         if res["available"]:
             summaries.append(summarize(res))
+        # On persiste dès qu'une approche est finie (robustesse aux interruptions).
+        report = _write()
+        logger.info("Résultats partiels écrits (%d approche(s)) : %s", len(summaries), out_path)
 
-    report = {
-        "n_cases": len(dataset),
-        "repeats": repeats,
-        "approaches": approaches_raw,
-        "summaries": summaries,
-    }
-    # Persistance pour les graphiques (violin de latence, barres de qualité).
-    out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-    logger.info("Résultats écrits : %s", out_path)
+    logger.info("Résultats finaux écrits : %s", out_path)
     return report
 
 
@@ -335,9 +387,28 @@ def main() -> int:
     parser.add_argument(
         "--repeats", type=int, default=3, help="Répétitions par requête (min de latence)."
     )
+    parser.add_argument(
+        "--db",
+        default=None,
+        help="Base ciblée (défaut : base LIGHT de la démo). Passer data/institut_wide.db "
+        "pour l'étude « gros schéma » (HEAVY).",
+    )
+    parser.add_argument(
+        "--per-level",
+        type=int,
+        default=None,
+        help="Échantillon de N cas par palier (facile/moyen/difficile) au lieu du jeu complet. "
+        "Recommandé sur HEAVY (génération lente).",
+    )
     args = parser.parse_args()
 
-    report = run_benchmark(args.approaches, Path(args.out), repeats=args.repeats)
+    report = run_benchmark(
+        args.approaches,
+        Path(args.out),
+        repeats=args.repeats,
+        db_path=args.db,
+        per_level=args.per_level,
+    )
     logger.info("\n%s", _format_summary(report["summaries"]))
     return 0
 

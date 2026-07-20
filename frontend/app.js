@@ -7,7 +7,11 @@
  *
  * Aucune dépendance de build : on charge Tailwind + Vega par <script>. Le style
  * suit le house style front-ui (dark mode par classe, focus rings, motion-reduce).
+ * Les chaînes visibles viennent de l'i18n (module i18n.js → /api/i18n → YAML).
  */
+
+// Internationalisation : t() traduit, initI18n() charge les chaînes depuis l'API.
+import { currentLang, initI18n, setLang, t } from "./i18n.js";
 
 // État applicatif minimal : l'approche sélectionnée. « qwen » par défaut car
 // c'est la plus pédagogique (aucune magie de framework).
@@ -111,7 +115,7 @@ async function loadHealth() {
     box.classList.remove("hidden");
   } catch (e) {
     // En cas d'API muette, on affiche un badge d'erreur discret.
-    box.innerHTML = `<span class="text-red-500">API injoignable</span>`;
+    box.innerHTML = `<span class="text-red-500">${t("api.down")}</span>`;
     box.classList.remove("hidden");
   }
 }
@@ -124,7 +128,7 @@ async function loadHealth() {
 async function loadSchema() {
   try {
     const s = await api("/api/schema");
-    $("#table-count").textContent = s.tables.length;
+    $("#schema-summary").textContent = t("schema.summary", { n: s.tables.length });
     $("#schema-ddl").textContent = s.ddl;
   } catch (e) {
     $("#schema-ddl").textContent = "Schéma indisponible.";
@@ -166,7 +170,7 @@ async function loadSamples() {
  * @returns {string} Le fragment HTML du tableau (borné à 100 lignes affichées).
  */
 function renderTable(columns, rows) {
-  if (!columns || columns.length === 0) return "<p class='text-xs text-gray-500'>Aucune colonne.</p>";
+  if (!columns || columns.length === 0) return `<p class='text-xs text-gray-500'>${t("nocolumn")}</p>`;
   // En-tête : scope="col" pour que les lecteurs d'écran associent chaque cellule
   // à sa colonne.
   const head = columns.map((c) => `<th scope="col" class="px-2 py-1 text-left font-medium">${escapeHtml(c)}</th>`).join("");
@@ -181,10 +185,10 @@ function renderTable(columns, rows) {
     )
     .join("");
   // Note si le tableau est tronqué à l'affichage.
-  const more = rows.length > 100 ? `<p class="text-[11px] text-gray-500 mt-1">… ${rows.length - 100} lignes supplémentaires non affichées.</p>` : "";
+  const more = rows.length > 100 ? `<p class="text-[11px] text-gray-500 mt-1">${escapeHtml(t("rows.more", { n: rows.length - 100 }))}</p>` : "";
   // <caption> en sr-only : décrit le tableau pour les lecteurs d'écran sans
   // encombrer l'affichage visuel.
-  const caption = `<caption class="sr-only">Résultats de la requête : ${rows.length} ligne(s), colonnes ${escapeHtml(columns.join(", "))}.</caption>`;
+  const caption = `<caption class="sr-only">${escapeHtml(t("table.caption", { n: rows.length, cols: columns.join(", ") }))}</caption>`;
   return `<div class="overflow-auto max-h-80 rounded-lg border border-gray-200 dark:border-gray-800">
       <table class="w-full text-xs">${caption}<thead class="bg-gray-50 dark:bg-gray-800 sticky top-0"><tr>${head}</tr></thead><tbody>${body}</tbody></table>
     </div>${more}`;
@@ -202,7 +206,7 @@ function renderBlock(block, question, index) {
   // Cas 1 : approche indisponible (dépendance/serveur manquant).
   if (!block.available) {
     return `<div class="rounded-2xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4">
-        <h3 class="font-bold text-sm">${escapeHtml(block.approach_key)} — indisponible</h3>
+        <h3 class="font-bold text-sm">${escapeHtml(block.approach_key)} — ${t("unavailable")}</h3>
         <p class="text-xs mt-1 text-amber-800 dark:text-amber-300">${escapeHtml(block.error)}</p>
       </div>`;
   }
@@ -218,7 +222,7 @@ function renderBlock(block, question, index) {
   if (!block.gen_ok) {
     return `<div class="rounded-2xl border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4 space-y-2">
         ${header}
-        <p class="text-xs text-red-700 dark:text-red-300">Échec de génération : ${escapeHtml(block.gen_error)}</p>
+        <p class="text-xs text-red-700 dark:text-red-300">${escapeHtml(t("genfailed", { err: block.gen_error }))}</p>
       </div>`;
   }
 
@@ -230,7 +234,7 @@ function renderBlock(block, question, index) {
   let rawBlock = "";
   if (block.raw && block.raw.trim() !== block.sql.trim()) {
     rawBlock = `<details class="text-xs">
-        <summary class="cursor-pointer text-gray-500 dark:text-gray-400">Sortie brute du modèle</summary>
+        <summary class="cursor-pointer text-gray-500 dark:text-gray-400">${t("rawoutput")}</summary>
         <pre class="sql-code mt-1 rounded-lg bg-gray-100 dark:bg-gray-800 p-2 font-mono overflow-auto">${escapeHtml(block.raw)}</pre>
       </details>`;
   }
@@ -239,15 +243,15 @@ function renderBlock(block, question, index) {
   let resultBlock = "";
   let figureButton = "";
   if (block.exec_ok === false) {
-    resultBlock = `<p class="text-xs text-red-600 dark:text-red-400">Erreur d'exécution : ${escapeHtml(block.exec_error)}</p>`;
+    resultBlock = `<p class="text-xs text-red-600 dark:text-red-400">${escapeHtml(t("execerror", { err: block.exec_error }))}</p>`;
   } else if (block.columns) {
-    const trunc = block.truncated ? " (tronqué)" : "";
-    resultBlock = `<p class="text-xs text-gray-500 mb-1">${block.row_count} ligne(s)${trunc}</p>` + renderTable(block.columns, block.rows);
+    const trunc = block.truncated ? t("truncated") : "";
+    resultBlock = `<p class="text-xs text-gray-500 mb-1">${escapeHtml(t("rows", { n: block.row_count }))}${trunc}</p>` + renderTable(block.columns, block.rows);
     // Bouton figure seulement s'il y a des données à tracer. L'index permet de
     // retrouver les données côté JS (state.lastResults), sans les stocker en DOM.
     if (block.row_count > 0) {
       figureButton = `<button class="figure-btn mt-2 text-xs rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 hover:bg-brand hover:text-white focus:outline-none focus:ring-2 focus:ring-brand"
-          data-index="${index}">📊 Générer une figure (Gemma)</button>`;
+          data-index="${index}">${t("figure.button")}</button>`;
     }
   }
 
@@ -289,7 +293,7 @@ async function runQuery() {
   // aria-busy sur la zone de résultats : le lecteur d'écran sait qu'elle se met à jour.
   const results = $("#results");
   results.setAttribute("aria-busy", "true");
-  results.innerHTML = `<p class="text-sm text-gray-500" role="status">Génération en cours (les modèles locaux peuvent prendre quelques secondes)…</p>`;
+  results.innerHTML = `<p class="text-sm text-gray-500" role="status">${t("loading")}</p>`;
 
   try {
     // Appel API : l'approche « toutes » lance les trois pour la comparaison.
@@ -301,12 +305,17 @@ async function runQuery() {
     // On mémorise les résultats en JS pour la génération de figure ultérieure.
     state.lastResults = data.results;
     state.lastQuestion = question;
-    // Rendu de chaque bloc résultat.
-    $("#results").innerHTML = data.results
-      .map((b, i) => renderBlock(b, question, i))
-      .join("");
+    // Petite ligne « langue détectée » (langdetect côté serveur) : pédagogique,
+    // montre qu'on sait d'où on part (fr/en) avant de traduire en SQL.
+    const detected =
+      data.detected_lang && data.detected_lang !== "und"
+        ? `<p class="text-[11px] text-gray-400 mb-2">${escapeHtml(t("detected", { lang: data.detected_lang }))}</p>`
+        : "";
+    // Rendu de chaque bloc résultat, précédé de la langue détectée.
+    $("#results").innerHTML =
+      detected + data.results.map((b, i) => renderBlock(b, question, i)).join("");
   } catch (e) {
-    $("#results").innerHTML = `<p class="text-sm text-red-600">Erreur : ${escapeHtml(e.message)}</p>`;
+    $("#results").innerHTML = `<p class="text-sm text-red-600">${escapeHtml(t("error", { msg: e.message }))}</p>`;
   } finally {
     // On restaure toujours le bouton, succès ou échec.
     btn.disabled = false;
@@ -328,7 +337,7 @@ async function makeFigure(button) {
   const card = button.closest("div");
   const target = card.querySelector(".figure-target");
   // Message d'attente : Gemma réfléchit au type de figure.
-  target.innerHTML = `<p class="text-xs text-gray-500 mt-2">Gemma choisit une visualisation…</p>`;
+  target.innerHTML = `<p class="text-xs text-gray-500 mt-2">${t("gen.choosing")}</p>`;
 
   // On relit les données depuis l'état JS via l'index du bloc (pas depuis le DOM).
   const block = state.lastResults[Number(button.dataset.index)] || {};
@@ -340,7 +349,7 @@ async function makeFigure(button) {
     const fig = await api("/api/figure", { question, columns, rows });
     // Gemma peut juger qu'aucune figure n'a de sens : on l'explique.
     if (!fig.ok) {
-      target.innerHTML = `<p class="text-xs text-gray-500 mt-2">Pas de figure : ${escapeHtml(fig.error || "non pertinent")}.</p>`;
+      target.innerHTML = `<p class="text-xs text-gray-500 mt-2">${escapeHtml(t("figure.none", { reason: fig.error || t("figure.norelevant") }))}</p>`;
       return;
     }
     // On emballe le graphique dans <figure role="img"> avec un aria-label
@@ -363,7 +372,7 @@ async function makeFigure(button) {
       ariaHidden: true,
     });
   } catch (e) {
-    target.innerHTML = `<p class="text-xs text-red-600 mt-2">Erreur figure : ${escapeHtml(e.message)}</p>`;
+    target.innerHTML = `<p class="text-xs text-red-600 mt-2">${escapeHtml(t("figure.error", { msg: e.message }))}</p>`;
   }
 }
 
@@ -428,6 +437,14 @@ function wireEvents() {
   $("#theme-toggle").addEventListener("click", () => {
     applyTheme(!document.documentElement.classList.contains("dark"));
   });
+
+  // Bascule de LANGUE (🌐) : fr <-> en. setLang réécrit tout le texte statique ;
+  // on rafraîchit aussi les libellés (schéma, exemples) qui dépendent de données.
+  $("#lang-toggle").addEventListener("click", () => {
+    setLang(currentLang() === "fr" ? "en" : "fr");
+    // Le résumé du schéma contient un nombre : on le recharge dans la langue.
+    loadSchema();
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -440,7 +457,7 @@ function wireEvents() {
  *
  * @returns {void}
  */
-function main() {
+async function main() {
   // Thème : préférence mémorisée, sinon préférence système.
   const saved = localStorage.getItem("theme");
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -448,6 +465,10 @@ function main() {
 
   wireEvents();
   refreshApproachButtons();
+
+  // i18n : on récupère les chaînes (YAML → /api/i18n) et on traduit le statique
+  // AVANT de charger le reste, pour éviter un flash de clés brutes.
+  await initI18n();
 
   // Chargements initiaux en parallèle (indépendants les uns des autres).
   loadHealth();

@@ -22,7 +22,8 @@ import re
 from dataclasses import dataclass
 from datetime import date, datetime
 
-from .llm import MODEL_FIGURE, chat, is_up
+from .llm import MODEL_FIGURE, chat, detect_language, is_up
+from .prompts import figure_system
 
 logger = logging.getLogger(__name__)
 
@@ -36,19 +37,8 @@ _CATEGORY = ["#007AFF", "#FF9500", "#34C759", "#AF52DE", "#00C7BE", "#FFCC00", "
 _PRIMARY = _CATEGORY[0]  # série unique -> bleu
 
 # Consigne système : Gemma ne renvoie QUE du JSON, choisi dans un menu fermé.
-_SYSTEM = """Tu es un assistant de data-visualisation. On te donne une question,
-les colonnes d'un résultat SQL et un échantillon de lignes. Choisis LA meilleure
-figure et réponds UNIQUEMENT par un objet JSON valide, sans Markdown, avec les clés :
-  "chart_type": un de ["bar","line","pie","scatter","hist","none"],
-  "x": nom exact de la colonne des abscisses (ou catégories),
-  "y": nom exact de la colonne des valeurs numériques (ou null),
-  "title": titre court en français,
-  "rationale": une phrase expliquant le choix.
-Règles : "line" pour une évolution temporelle ; "bar" pour comparer des catégories ;
-"pie" seulement si peu de catégories (<8) qui somment à un tout ; "hist" pour une
-distribution d'une variable ; "scatter" pour deux variables numériques ;
-"none" si aucune figure n'a de sens. Utilise EXACTEMENT les noms de colonnes fournis.
-"""
+# La consigne système de choix de figure n'est plus en dur ici : elle vient du
+# YAML (backend.prompts.figure_system), dans la langue de la question.
 
 # Repère un objet JSON dans une sortie éventuellement bavarde du modèle.
 _JSON_OBJ = re.compile(r"\{.*\}", re.DOTALL)
@@ -220,9 +210,11 @@ def _ask_gemma_for_spec(question: str, columns: list[str], rows: list[list], mod
         + json.dumps(payload, ensure_ascii=False, default=str)
         + "\n\nDonne la spécification de figure en JSON."
     )
+    # Consigne système chargée du YAML, dans la langue de la question détectée.
+    system = figure_system(detect_language(question))
     # Petite température : le choix de figure tolère un peu de souplesse.
     result = chat(
-        [{"role": "system", "content": _SYSTEM}, {"role": "user", "content": user}],
+        [{"role": "system", "content": system}, {"role": "user", "content": user}],
         model=model,
         temperature=0.2,
     )

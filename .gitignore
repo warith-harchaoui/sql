@@ -23,9 +23,14 @@ data/*.sqlite
 *.db-journal
 *.db-wal
 *.db-shm
-# Index vectoriel de Vanna (ChromaDB), régénéré à l'entraînement.
-data/vanna_chroma/
+# Index vectoriel de Vanna (ChromaDB), régénéré à l'entraînement. Un dossier par
+# base et par mode (vanna_chroma, vanna_chroma_plus, *_wide pour le gros schéma).
+data/vanna_chroma*/
 **/chroma.sqlite3
+
+# Rapports EDA skrub (docs/eda/*.html) : volumineux et régénérables via
+# `python -m backend.eda_report`. On ne versionne pas les artefacts lourds.
+docs/eda/
 
 # --- Python ------------------------------------------------------------------
 __pycache__/

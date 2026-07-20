@@ -25,14 +25,15 @@ jobs:
         with:
           python-version: "3.11"
 
-      # Installe uniquement le nécessaire à la suite rapide : le cœur + les
-      # outils de test. On évite langchain/vanna/deepeval (lourds) : les modules
+      # Installe uniquement le nécessaire à la suite rapide : le cœur applicatif
+      # léger + l'outillage dev/test (requirements-dev.txt). On évite les
+      # dépendances lourdes (langchain/vanna/deepeval/skrub) : les modules
       # concernés se dégradent proprement s'ils sont absents.
-      - name: Installer les dépendances (cœur + tests)
+      - name: Installer les dépendances (cœur léger + dev/test)
         run: |
           python -m pip install --upgrade pip
-          pip install faker requests fastapi "uvicorn[standard]" pydantic langdetect \
-                      pytest pytest-cov ruff httpx
+          pip install faker requests fastapi "uvicorn[standard]" pydantic langdetect pyyaml
+          pip install -r requirements-dev.txt
 
       # Garde style : PEP 8 + format. Bloque le merge en cas d'écart.
       - name: Ruff (lint + format)

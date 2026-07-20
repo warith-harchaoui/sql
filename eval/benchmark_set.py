@@ -297,141 +297,224 @@ BENCH: list[GoldenCase] = (
 )
 
 
-def _generate_templated(target: int = 254) -> list[GoldenCase]:
-    """Génère un grand lot de cas templatés, dont le SQL de référence est correct par construction.
+def _numeric_cols(schema: dict) -> list[str]:
+    """Colonnes numériques « mesurables » d'une table (entiers/réels, ni clé ni _id)."""
+    return [
+        c["name"]
+        for c in schema["columns"]
+        if c["type"].upper() in ("INTEGER", "REAL")
+        and not c["pk"]
+        and not c["name"].endswith("_id")
+    ]
 
-    On introspecte la base et on décline quelques patrons SÛRS (comptages,
-    regroupements, agrégats, filtres par valeur) sur les tables et colonnes
-    réelles. Le SQL de référence est donc trivialement correct — ce qui permet
-    d'atteindre un gros volume (~300 avec le jeu curaté) sans écrire 254 requêtes
-    à la main. C'est le modèle génératif qui sera jugé dessus.
 
-    Parameters
-    ----------
-    target : int
-        Nombre de cas visé (on s'arrête une fois atteint).
+def _date_cols(schema: dict) -> list[str]:
+    """Colonnes de type date (TEXT dont le nom contient « date »)."""
+    return [
+        c["name"]
+        for c in schema["columns"]
+        if "date" in c["name"].lower() and "TEXT" in c["type"].upper()
+    ]
 
-    Returns
-    -------
-    list[GoldenCase]
-        Les cas générés (identifiants ``gen-XXX``).
 
-    Notes
-    -----
-    Import de ``backend.db`` fait ici (pas au niveau module) pour que l'import de
-    ce module ne déclenche aucune requête tant que la base n'est pas construite.
-    """
-    from backend import db
-
-    cases: list[GoldenCase] = []
-    cats = db.categorical_values(max_distinct=15)  # {table: {col: [valeurs]}}
+def _gen_easy(db, cats: dict) -> list[GoldenCase]:
+    """Génère des cas FACILES : agrégats sur UNE table (count, avg, min, max, count-by)."""
+    out: list[GoldenCase] = []
     i = 0
 
-    def add(dom: str, q: str, sql: str, diff: str) -> None:
-        """Ajoute un cas généré avec un identifiant séquentiel."""
+    def add(dom: str, q: str, sql: str) -> None:
         nonlocal i
-        cases.append(GoldenCase(f"gen-{i:03d}", dom, q, sql, difficulte=diff))
+        out.append(GoldenCase(f"e-{i:03d}", dom, q, sql, difficulte="facile"))
         i += 1
 
     for t in db.list_tables():
-        if len(cases) >= target:
-            break
-        schema = db.table_schema(t)
-        # Colonnes numériques « mesurables » : entiers/réels, ni clé, ni identifiant.
-        numeric = [
-            c["name"]
-            for c in schema["columns"]
-            if c["type"].upper() in ("INTEGER", "REAL")
-            and not c["pk"]
-            and not c["name"].endswith("_id")
-        ]
-        catcols = list(cats.get(t, {}).keys())
-
-        # Patron 1 — comptage total de la table (facile).
-        add(
-            t,
-            f"Combien de lignes contient la table {t} ?",
-            f"SELECT COUNT(*) AS n FROM {t}",
-            "facile",
-        )
-        # Patron 6 — top 5 des plus grandes valeurs d'une colonne numérique (moyen).
-        for numcol in numeric[:2]:
-            add(
-                t,
-                f"Les 5 plus grandes valeurs de {numcol} dans {t}.",
-                f"SELECT {numcol} FROM {t} ORDER BY {numcol} DESC LIMIT 5",
-                "moyen",
-            )
-        # Patron 2 — comptage par colonne catégorielle + nb de valeurs distinctes (facile).
-        for col in catcols:
+        num = _numeric_cols(db.table_schema(t))
+        cc = list(cats.get(t, {}).keys())
+        add(t, f"Combien de lignes contient la table {t} ?", f"SELECT COUNT(*) AS n FROM {t}")
+        for col in cc:
             add(
                 t,
                 f"Nombre de {t} par {col}.",
                 f"SELECT {col}, COUNT(*) AS n FROM {t} GROUP BY {col}",
-                "facile",
             )
             add(
                 t,
                 f"Combien de {col} distincts dans {t} ?",
                 f"SELECT COUNT(DISTINCT {col}) AS n FROM {t}",
-                "facile",
             )
-        # Patron 3 — moyenne, maximum et minimum d'une colonne numérique (facile).
-        for numcol in numeric[:3]:
+        for nc in num[:3]:
+            add(t, f"Moyenne de {nc} dans {t}.", f"SELECT AVG({nc}) AS moyenne FROM {t}")
+            add(t, f"Valeur maximale de {nc} dans {t}.", f"SELECT MAX({nc}) AS maxi FROM {t}")
+            add(t, f"Valeur minimale de {nc} dans {t}.", f"SELECT MIN({nc}) AS mini FROM {t}")
+            add(t, f"Somme totale de {nc} dans {t}.", f"SELECT SUM({nc}) AS total FROM {t}")
+    return out
+
+
+def _gen_medium(db, cats: dict) -> list[GoldenCase]:
+    """Génère des cas MOYENS : tri+LIMIT, somme par catégorie, filtre par valeur, mois."""
+    out: list[GoldenCase] = []
+    i = 0
+
+    def add(dom: str, q: str, sql: str, ordered: bool = False) -> None:
+        nonlocal i
+        out.append(GoldenCase(f"m-{i:03d}", dom, q, sql, ordered=ordered, difficulte="moyen"))
+        i += 1
+
+    for t in db.list_tables():
+        num = _numeric_cols(db.table_schema(t))
+        cc = list(cats.get(t, {}).keys())
+        dates = _date_cols(db.table_schema(t))
+        # Top 5 des plus grandes valeurs (tri + LIMIT).
+        for nc in num[:2]:
             add(
                 t,
-                f"Moyenne de {numcol} dans {t}.",
-                f"SELECT AVG({numcol}) AS moyenne FROM {t}",
-                "facile",
+                f"Les 5 plus grandes valeurs de {nc} dans {t}.",
+                f"SELECT {nc} FROM {t} ORDER BY {nc} DESC LIMIT 5",
             )
-            add(
-                t,
-                f"Valeur maximale de {numcol} dans {t}.",
-                f"SELECT MAX({numcol}) AS maxi FROM {t}",
-                "facile",
-            )
-            add(
-                t,
-                f"Valeur minimale de {numcol} dans {t}.",
-                f"SELECT MIN({numcol}) AS mini FROM {t}",
-                "facile",
-            )
-        # Patron 4 — somme d'une colonne numérique par colonne catégorielle (moyen).
-        for numcol in numeric[:2]:
-            for col in catcols[:2]:
+        # Somme d'une colonne numérique par catégorie.
+        for nc in num[:2]:
+            for col in cc[:2]:
                 add(
                     t,
-                    f"Somme de {numcol} par {col} dans {t}.",
-                    f"SELECT {col}, SUM({numcol}) AS total FROM {t} GROUP BY {col}",
-                    "moyen",
+                    f"Somme de {nc} par {col} dans {t}.",
+                    f"SELECT {col}, SUM({nc}) AS total FROM {t} GROUP BY {col}",
                 )
-        # Patron 5 — comptage filtré sur une valeur (moyen) : la valeur exacte est
-        # citée (SQL correct garanti), mais teste quand même la rigueur du modèle.
-        for col in catcols[:3]:
+        # Comptage filtré sur une valeur exacte.
+        for col in cc[:3]:
             for val in cats[t][col][:3]:
-                esc = val.replace("'", "''")  # échappe les apostrophes SQL
+                esc = val.replace("'", "''")
                 add(
                     t,
                     f"Combien de {t} ont {col} égal à « {val} » ?",
                     f"SELECT COUNT(*) AS n FROM {t} WHERE {col} = '{esc}'",
-                    "moyen",
                 )
-    return cases[:target]
+        # Regroupement par mois en 2026 (fonction de date).
+        for dc in dates[:1]:
+            add(
+                t,
+                f"Nombre de {t} par mois en 2026 (colonne {dc}).",
+                f"SELECT strftime('%Y-%m', {dc}) AS mois, COUNT(*) AS n FROM {t} "
+                f"WHERE {dc} >= '2026-01-01' AND {dc} < '2027-01-01' GROUP BY mois ORDER BY mois",
+                ordered=True,
+            )
+    return out
 
 
-def large_bench(total: int = 500) -> list[GoldenCase]:
-    """Assemble le TRÈS grand jeu : les cas curatés + un gros lot généré.
+def _gen_hard(db, cats20: dict, cats: dict) -> list[GoldenCase]:
+    """Génère des cas DIFFICILES : jointures, sommes jointes, anti-jointures, HAVING."""
+    from backend.db import run_select
+
+    out: list[GoldenCase] = []
+    i = 0
+
+    def add(dom: str, q: str, sql: str) -> None:
+        nonlocal i
+        out.append(GoldenCase(f"d-{i:03d}", dom, q, sql, difficulte="difficile"))
+        i += 1
+
+    # Graphe des clés étrangères : (enfant, colonne, parent, colonne_ref).
+    fks = []
+    for t in db.list_tables():
+        for f in db.table_schema(t)["foreign_keys"]:
+            fks.append((t, f["column"], f["ref_table"], f["ref_column"]))
+
+    for child, col, parent, ref in fks:
+        pcats = list(cats20.get(parent, {}).keys())
+        # Jointure + comptage par catégorie du parent.
+        for pcat in pcats[:3]:
+            add(
+                child,
+                f"Nombre de {child} par {pcat} (du {parent} lié).",
+                f"SELECT p.{pcat}, COUNT(*) AS n FROM {child} c "
+                f"JOIN {parent} p ON p.{ref} = c.{col} GROUP BY p.{pcat}",
+            )
+        # Jointure + somme d'une colonne numérique de l'enfant par catégorie du parent.
+        cnum = _numeric_cols(db.table_schema(child))
+        if cnum and pcats:
+            add(
+                child,
+                f"Somme de {cnum[0]} par {pcats[0]} (du {parent} lié).",
+                f"SELECT p.{pcats[0]}, SUM(c.{cnum[0]}) AS total FROM {child} c "
+                f"JOIN {parent} p ON p.{ref} = c.{col} GROUP BY p.{pcats[0]}",
+            )
+        # Jointure filtrée sur une valeur du parent.
+        if pcats and cats20[parent][pcats[0]]:
+            val = cats20[parent][pcats[0]][0].replace("'", "''")
+            add(
+                child,
+                f"Combien de {child} pour les {parent} dont {pcats[0]} = « {val} » ?",
+                f"SELECT COUNT(*) AS n FROM {child} c JOIN {parent} p "
+                f"ON p.{ref} = c.{col} WHERE p.{pcats[0]} = '{val}'",
+            )
+        # Anti-jointure : parents jamais référencés dans l'enfant.
+        add(
+            parent,
+            f"Combien de {parent} ne sont jamais référencés dans {child} ?",
+            f"SELECT COUNT(*) AS n FROM {parent} WHERE {ref} NOT IN "
+            f"(SELECT {col} FROM {child} WHERE {col} IS NOT NULL)",
+        )
+
+    # HAVING : catégories dépassant un seuil (médiane des effectifs → non trivial).
+    for t in db.list_tables():
+        for col in list(cats.get(t, {}).keys())[:2]:
+            counts = [
+                r[1] for r in run_select(f"SELECT {col}, COUNT(*) FROM {t} GROUP BY {col}").rows
+            ]
+            if len(counts) < 3:
+                continue
+            seuil = sorted(counts)[len(counts) // 2]  # médiane
+            add(
+                t,
+                f"Quelles valeurs de {col} ont au moins {seuil} {t} ?",
+                f"SELECT {col}, COUNT(*) AS n FROM {t} GROUP BY {col} HAVING COUNT(*) >= {seuil}",
+            )
+    return out
+
+
+def balanced_bench(n: int = 256) -> list[GoldenCase]:
+    """Assemble un jeu ÉQUILIBRÉ : exactement ``n`` cas par palier (facile/moyen/difficile).
+
+    On mélange les cas curatés (questions naturelles, jointures écrites à la main)
+    et les cas générés par patrons sûrs, on vérifie que chaque SQL de référence
+    s'exécute, on déduplique, puis on prend ``n`` par palier — pour un total de
+    ``3 × n`` requêtes (768 par défaut).
 
     Parameters
     ----------
-    total : int
-        Taille totale visée (curatés + générés). 500 par défaut.
+    n : int
+        Nombre de cas par palier de difficulté.
 
     Returns
     -------
     list[GoldenCase]
-        ``BENCH`` (curaté, avec jointures/questions naturelles) suivi des cas
-        générés, pour ``total`` requêtes au total.
+        Le jeu équilibré (facile puis moyen puis difficile).
     """
-    # On complète le jeu curaté avec juste ce qu'il faut de cas générés.
-    return BENCH + _generate_templated(target=max(0, total - len(BENCH)))
+    from backend import db
+    from backend.db import run_select
+
+    cats = db.categorical_values(max_distinct=15)
+    cats20 = db.categorical_values(max_distinct=20)
+
+    def keep_ok(cases: list[GoldenCase]) -> list[GoldenCase]:
+        """Garde les cas dont le SQL s'exécute, sans doublon de SQL."""
+        seen: set[str] = set()
+        out: list[GoldenCase] = []
+        for c in cases:
+            if c.sql_ref in seen:
+                continue
+            seen.add(c.sql_ref)
+            if run_select(c.sql_ref).ok:
+                out.append(c)
+        return out
+
+    # Chaque palier : cas curatés d'abord (meilleure qualité), puis générés.
+    easy = keep_ok(_tag(GOLDEN, "facile") + _gen_easy(db, cats))
+    medium = keep_ok(MEDIUM + _gen_medium(db, cats))
+    hard = keep_ok(_tag(GOLDEN_HARD, "difficile") + HARD_EXTRA + _gen_hard(db, cats20, cats))
+    return easy[:n] + medium[:n] + hard[:n]
+
+
+# Rétro-compat : l'ancien nom pointe désormais sur le jeu équilibré.
+def large_bench(total: int = 768) -> list[GoldenCase]:
+    """Alias historique → jeu équilibré 256/256/256 (``total`` réparti en 3 paliers)."""
+    return balanced_bench(n=max(1, total // 3))
