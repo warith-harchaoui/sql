@@ -121,7 +121,7 @@ GOLDEN: list[GoldenCase] = [
 # Jeu DIFFICILE : regroupements temporels, multi-jointures, HAVING, fonctions de
 # date, filtres croisés. Il existe pour EXPOSER le plafond réel — sur ce jeu, un
 # modèle local ne fait pas 100 %. C'est l'honnêteté qui manquait à un jeu trop
-# facile (cf. ASSESSMENT.md). À lancer avec `--hard`.
+# facile (voir le jeu difficile). À lancer avec `--hard`.
 GOLDEN_HARD: list[GoldenCase] = [
     GoldenCase(
         id="hard-temporel-01",

@@ -43,7 +43,7 @@ seeing them side by side*:
    schema would hide exactly what students need to see.
 3. **It is honest about failure.** It *measures* accuracy (execution accuracy,
    like Spider/BIRD), ships an easy **and** a deliberately hard question set to
-   expose the real ceiling, and its [`ASSESSMENT.md`](ASSESSMENT.md) says plainly
+   expose the real ceiling, and it says plainly
    what works and what doesn't. The lesson isn't "LLMs write SQL" — it's that the
    hard part is guaranteeing the SQL answers the *right* question.
 4. **It shows the guardrails, not just the magic.** Read-only execution, why
@@ -573,6 +573,5 @@ The web UI targets **WCAG 2.1 AA**, verified with the project's front-end toolin
   generous comments, tests, eval, Ruff/PEP 8) — see `CODING.md`.
 - The Ollama client has been copy-pasted from the author's local
   [`roitelet`](https://github.com/warith-harchaoui/roitelet) framework.
-- Timestamped build log: [`todo.md`](todo.md).
 
 

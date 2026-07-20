@@ -102,7 +102,7 @@ Toutes exposent le même contrat (`backend/approaches/base.py`) ; seul diffère 
 ## Documentation
 
 `README.md` (EN) ↔ `LISEZMOI.md` (FR) · `USERGUIDE.md` ↔ `MODEDEMPLOI.md` · `PROS_CONS.md`
-(comparatif sourcé + CVE) · `ASSESSMENT.md` (auto-critique) · `EXAMPLES.md` (recettes) ·
+(comparatif sourcé + CVE) · `EXAMPLES.md` (recettes) ·
 `CODING.md` (standard) · diagrammes **Mermaid** (archi, 5 moteurs, carte du dépôt).
 
 ## Récapitulatif des dépendances par rôle

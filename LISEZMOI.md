@@ -45,7 +45,7 @@ compromis en les voyant côte à côte* :
    montrer.
 3. **Il est honnête sur l'échec.** Il *mesure* la qualité (exactitude d'exécution,
    comme Spider/BIRD), livre un jeu de questions faciles **et** un jeu difficile
-   exprès pour exposer le vrai plafond, et son [`ASSESSMENT.md`](ASSESSMENT.md) dit
+   exprès pour exposer le vrai plafond, et il dit
    franchement ce qui marche et ce qui ne marche pas. La leçon n'est pas « les LLM
    écrivent du SQL » — c'est que le dur, c'est de garantir que le SQL répond à la
    *bonne* question.
@@ -581,5 +581,4 @@ L'interface vise **WCAG 2.1 AA**, vérifié avec l'outillage front du projet :
   commentaires abondants, tests, éval, Ruff/PEP 8) — voir `CODING.md`.
 - Le client Ollama a été copier-coller de manière simplifiée du framework 
   [`roitelet`](https://github.com/warith-harchaoui/roitelet) de l'auteur.
-- Suivi de construction horodaté : [`todo.md`](todo.md).
 
