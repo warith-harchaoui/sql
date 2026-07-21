@@ -65,7 +65,7 @@ situation, et **pourquoi** la réponse honnête est « ça dépend ».
 
 ## Ce que ça démontre
 
-Trois approches text2SQL, du plus « bas niveau » au plus « framework », comparées
+Trois **approches** text2SQL, du plus « bas niveau » au plus « framework », comparées
 côte à côte sur la même question :
 
 | # | Approche | Idée | Ce qu'on apprend |
@@ -76,6 +76,13 @@ côte à côte sur la même question :
 
 … plus **Gemma** (`gemma4`) qui **choisit la visualisation** adaptée au résultat
 et renvoie une spec **Vega-Lite** rendue dans le navigateur.
+
+> **3 approches, 5 configurations de benchmark.** La démo interactive présente une
+> configuration par approche. Le benchmark ci-dessous va plus loin : il teste
+> QwenCoder avec **deux prompts** (naïf vs. soigneusement conçu) et Vanna avec
+> **deux niveaux d'entraînement** (basique vs. bien alimenté), soit 5 configs en
+> tout, toutes avec le même modèle et la même base. Ce protocole contrôlé isole
+> *ce qui fait vraiment la différence*.
 
 📄 Comparatif détaillé et sourcé (benchmarks Spider/BIRD, sécurité, CVE Vanna) :
 **[`PROS_CONS.md`](PROS_CONS.md)**.
