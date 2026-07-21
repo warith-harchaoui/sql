@@ -1216,11 +1216,14 @@ def build(out_path: Path) -> None:
     con.close()
 
 
-if __name__ == "__main__":
-    # Configuration console : le script est un utilitaire de génération, on veut
-    # voir le récapitulatif immédiatement sur stdout au format simple.
+def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="data/institut.db")
     args = ap.parse_args()
     build(Path(args.out))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

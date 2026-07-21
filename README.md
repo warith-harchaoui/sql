@@ -61,7 +61,7 @@ situation, and **why** the honest answer is "it depends".
 
 ## What it demonstrates
 
-Three text2sql approaches, from the most "low-level" to the most "framework",
+Three text2SQL approaches, from the most "low-level" to the most "framework",
 compared side by side on the same question:
 
 | # | Approach | Idea | What you learn |
@@ -197,7 +197,7 @@ functions) exists on purpose — a 100% score on easy questions proves little; t
 
 ## Benchmark — latency, speed and accuracy
 
-> A numerical study comparing text2sql approaches on a **balanced 768-query set**
+> A numerical study comparing text2SQL approaches on a **balanced 768-query set**
 > of the fictional hospital (**256 easy / 256 medium / 256 hard**). Crucially:
 > **all five configurations share the SAME LLM** (`qwen2.5-coder`, locally via
 > Ollama), the same database and the same execution guard — so we compare

@@ -65,7 +65,7 @@ situation, et **pourquoi** la réponse honnête est « ça dépend ».
 
 ## Ce que ça démontre
 
-Trois approches text2sql, du plus « bas niveau » au plus « framework », comparées
+Trois approches text2SQL, du plus « bas niveau » au plus « framework », comparées
 côte à côte sur la même question :
 
 | # | Approche | Idée | Ce qu'on apprend |
@@ -177,7 +177,7 @@ uvicorn backend.server:app --reload --port 8000  # API + front
 
 ## Évaluation IA
 
-La qualité d'un système text2sql se mesure par l'**exactitude d'exécution** : le
+La qualité d'un système text2SQL se mesure par l'**exactitude d'exécution** : le
 SQL généré renvoie-t-il le même résultat que le SQL de référence ? (métrique
 standard, cf. Spider/BIRD). Jeu de référence dans `eval/golden.py`, seuils
 versionnés dans `eval/run_eval.py`.
@@ -203,7 +203,7 @@ faciles ne prouve rien ; le `--hard` montre où un modèle local craque vraiment
 
 ## Benchmark — latence, vitesse et exactitude
 
-> Étude numérique comparant les approches text2sql sur un **jeu équilibré de 768
+> Étude numérique comparant les approches text2SQL sur un **jeu équilibré de 768
 > requêtes** de l'hôpital fictif (**256 faciles / 256 moyens / 256 difficiles**).
 > Point crucial : **les cinq configurations partagent le MÊME LLM**
 > (`qwen2.5-coder`, en local via Ollama), la même base et le même garde-fou
