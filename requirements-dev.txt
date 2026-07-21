@@ -1,19 +1,31 @@
-# requirements-dev.txt — outillage de développement, test et CI.
+# requirements-dev.txt — outillage dev, test, benchmark et CI.
 #
-# Séparé du « main » (requirements.txt) : ces paquets ne sont PAS nécessaires pour
-# faire tourner la démo, seulement pour la développer, la tester et régénérer les
-# captures. La CI installe ce fichier (+ le cœur applicatif léger) pour la suite
-# rapide — voir .github/workflows/ci.yml.
+# Séparé du « main » (requirements.txt) : ces paquets ne sont PAS nécessaires
+# pour faire tourner la démo. La CI installe les deux fichiers.
 #
-# Installation dev complète :
+# Environnement complet :
 #     pip install -r requirements.txt -r requirements-dev.txt
 
+# --- Tests & lint ------------------------------------------------------------
 pytest>=8.0            # framework de tests
 pytest-cov>=5.0        # couverture de code
-ruff>=0.5             # lint + format (PEP 8) — garde bloquante en CI
+ruff>=0.5              # lint + format (PEP 8) — bloquant en CI
 httpx>=0.27            # requis par fastapi.testclient dans les tests d'API
 
-# Régénération des captures d'écran et validation visuelle (front, figures).
-# Uniquement pour reconstruire docs/screenshots et docs/img — pas requis en CI.
-# Après installation : `python -m playwright install chromium` (ou canal `chrome`).
+# --- Captures d'écran (régénération docs/screenshots et docs/img) ------------
+# Après installation : python -m playwright install chromium
 playwright>=1.44
+
+# --- Benchmark & figures Vega-Lite -------------------------------------------
+# Nécessaire pour python -m eval.bench_charts (régénère les PNG du benchmark).
+vl-convert-python>=1.0
+
+# --- Évaluation IA (optionnel, lourd) ----------------------------------------
+# Décommenter pour lancer la suite d'évaluation complète.
+# deepeval>=1.0          # exactitude d'exécution du SQL (métrique custom)
+# giskard>=2.14          # scan de robustesse (Python < 3.12 uniquement)
+
+# --- EDA pédagogique (optionnel) ---------------------------------------------
+# Décommenter pour python -m backend.eda_report (profil de la base via skrub).
+# skrub>=0.5
+# pandas>=2.0

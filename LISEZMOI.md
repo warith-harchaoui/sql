@@ -158,7 +158,7 @@ défensif. (Motivé notamment par l'historique de RCE de Vanna, cf. `PROS_CONS.m
 ## Installation & lancement
 
 ```bash
-pip install -r requirements.txt   # cœur + LangChain + Vanna + éval
+pip install -r requirements.txt   # démo : QwenCoder + LangChain + Vanna
 ollama serve                      # dans un terminal séparé
 ./start.sh                        # vérifie Ollama, tire les modèles, construit la base, démarre
 # puis ouvrez http://localhost:8000
@@ -169,6 +169,12 @@ Ou manuellement :
 ```bash
 python -m backend.build_db                       # génère data/institut.db
 uvicorn backend.server:app --reload --port 8000  # API + front
+```
+
+**Environnement dev complet** (tests, lint, graphiques de benchmark, captures) :
+
+```bash
+pip install -r requirements.txt -r requirements-dev.txt
 ```
 
 📘 Recettes complètes (API Python, curl, éval) : **[`EXAMPLES.md`](EXAMPLES.md)**.

@@ -153,9 +153,9 @@ by Vanna's RCE history, see `PROS_CONS.md`.)
 ## Install & run
 
 ```bash
-pip install -r requirements.txt   # core + LangChain + Vanna + eval
+pip install -r requirements.txt   # demo: QwenCoder + LangChain + Vanna
 ollama serve                      # in a separate terminal
-./start.sh                        # checks Ollama, pulls models, builds the DB, starts
+./start.sh                        # checks Ollama, pulls models, builds DB, starts
 # then open http://localhost:8000
 ```
 
@@ -164,6 +164,12 @@ Or manually:
 ```bash
 python -m backend.build_db                       # generates data/institut.db
 uvicorn backend.server:app --reload --port 8000  # API + front
+```
+
+**Full dev environment** (tests, lint, benchmark charts, screenshots):
+
+```bash
+pip install -r requirements.txt -r requirements-dev.txt
 ```
 
 📘 Full recipes (Python API, curl, eval): **[`EXAMPLES.md`](EXAMPLES.md)**.

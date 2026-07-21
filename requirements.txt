@@ -1,40 +1,34 @@
-# requirements.txt — dépendances applicatives de la démo text2sql.
+# requirements.txt — dépendances pour FAIRE TOURNER la démo text2SQL.
 #
-# Le « main » : tout ce qui fait TOURNER la démo et produire ses livrables
-# (base de données, API, 3 approches, benchmark, figures, éval, EDA).
-# Les outils de test/lint/captures vivent dans requirements-dev.txt.
+# Installation rapide (suffit pour lancer la démo) :
+#     pip install -r requirements.txt
+#
+# Environnement complet dev/test/eval/captures :
+#     pip install -r requirements.txt -r requirements-dev.txt
+#
+# Les outils de test, lint, benchmark et éval sont dans requirements-dev.txt.
 
-# Cœur (obligatoire) : génère la base, sert l'API, exécute l'approche QwenCoder
-# brute + les figures Gemma. C'est le minimum pour une démo fonctionnelle.
-faker>=30.0            # génération de données synthétiques françaises réalistes
-requests>=2.31         # client HTTP synchrone vers Ollama
+# --- Génération de la base de données ----------------------------------------
+faker>=30.0            # données synthétiques françaises réalistes (build_db.py)
+
+# --- Serveur & API -----------------------------------------------------------
 fastapi>=0.110         # API web
-uvicorn[standard]>=0.29  # serveur ASGI pour lancer FastAPI
-pydantic>=2.6          # modèles de requête/réponse de l'API
-langdetect>=1.0        # détection de la langue de la question (fr/en) affichée dans le front
-pyyaml>=6.0            # source de vérité i18n (GUI + prompts) : locales/i18n.yaml
+uvicorn[standard]>=0.29  # serveur ASGI
+pydantic>=2.6          # modèles de requête / réponse
+requests>=2.31         # client HTTP synchrone vers Ollama
 
-# Approche 2 — LangChain (« toolbox connue »). Optionnel : sans ces paquets,
-# l'approche se déclare simplement indisponible dans le front.
+# --- Détection de langue & i18n ----------------------------------------------
+langdetect>=1.0        # détecte la langue de la question (fr/en) pour l'affichage
+pyyaml>=6.0            # source de vérité i18n : locales/i18n.yaml
+
+# --- Approche 2 : LangChain --------------------------------------------------
+# Sans ces paquets, l'approche se déclare indisponible dans l'interface.
 langchain>=0.2
 langchain-community>=0.2
 langchain-ollama>=0.1
 sqlalchemy>=2.0        # requis par SQLDatabase de LangChain
 
-# Approche 3 — Vanna AI (RAG). Optionnel de même. ChromaDB = store vectoriel.
+# --- Approche 3 : Vanna AI (RAG) ---------------------------------------------
+# Sans ces paquets, l'approche se déclare indisponible dans l'interface.
 vanna>=0.6
 chromadb>=0.5
-
-# Éval IA (CODING.md §14). Optionnels : la suite d'éval se skippe proprement
-# s'ils ne sont pas installés.
-deepeval>=1.0          # exactitude d'exécution du SQL (métrique custom)
-giskard>=2.14          # scan de robustesse
-
-# Benchmark & figures. `vl-convert-python` rend les specs Vega-Lite du benchmark
-# en PNG (module importé : `vl_convert`) → nécessaire pour `python -m eval.bench_charts`.
-vl-convert-python>=1.0
-
-# EDA (companion pédagogique) : profil interactif de la base via skrub.TableReport
-# (`python -m backend.eda_report`). N'entre PAS dans le pipeline text2sql.
-skrub>=0.5
-pandas>=2.0            # chargement des tables pour l'EDA skrub
