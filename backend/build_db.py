@@ -1217,6 +1217,7 @@ def build(out_path: Path) -> None:
 
 
 def main() -> int:
+    """Parse CLI arguments and run the database build."""
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="data/institut.db")
