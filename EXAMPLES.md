@@ -1,18 +1,18 @@
-# Examples — Text2SQL demo cookbook
+# Examples : Text2SQL demo cookbook
 
 Runnable recipes for the hospital text2sql demo. All commands assume the
 repository root as the working directory, a running `ollama serve`, and
 `pip install -r requirements.txt` done. See [`README.md`](README.md) for setup and
 [`PROS_CONS.md`](PROS_CONS.md) for the approach comparison.
 
-> The examples below use `print(...)` for readability — that is a tutorial
+> The examples below use `print(...)` for readability, that is a tutorial
 > exception; the library code itself uses `logging` (see `CODING.md` §6).
 
 ---
 
 ## 1. Build the database
 
-Deterministic build (seed fixed) — 30 tables, ~33k rows.
+Deterministic build (seed fixed), 30 tables, ~33k rows.
 
 ```bash
 python -m backend.build_db
@@ -48,7 +48,7 @@ print(db.schema_ddl(sample_rows=2))   # DDL + /* Exemples ... */ blocks
 
 ## 3. Generate SQL with each approach
 
-### 3a. QwenCoder — raw prompt, no framework
+### 3a. QwenCoder : raw prompt, no framework
 
 ```python
 from backend.approaches.qwen_ollama import QwenOllamaApproach
@@ -64,7 +64,7 @@ print(result.columns, result.rows[0])
 # ['localisation', 'n'] ['Rein', 47]  # alias 'n' (AS n) ; peut varier selon le modèle
 ```
 
-### 3b. LangChain — the well-known toolbox
+### 3b. LangChain : the well-known toolbox
 
 ```python
 from backend.approaches.langchain_sql import LangChainApproach
@@ -75,7 +75,7 @@ gen = lc.generate("Nombre d'employés par catégorie.")
 print(gen.sql)                        # SELECT categorie, COUNT(...) FROM employes GROUP BY ...
 ```
 
-### 3c. Vanna — RAG trained on the schema
+### 3c. Vanna : RAG trained on the schema
 
 ```python
 from backend.approaches.vanna_rag import VannaApproach
@@ -201,14 +201,14 @@ python -m eval.benchmark --repeats 1   # writes eval/benchmark_results.json (inc
 python -m eval.bench_charts            # writes bilingual PNGs in docs/img/{fr,en}/
 ```
 
-Add just one config to an existing report (merges by key — no full re-run):
+Add just one config to an existing report (merges by key, no full re-run):
 
 ```bash
 python -m eval.benchmark --approaches vanna_plus   # runs "Vanna 2", merges in
 ```
 
 The **well-fed Vanna** (Vanna 2) is trained with the enumerated column values +
-more example pairs — a fair-context comparison against QwenCoder's good prompt:
+more example pairs, a fair-context comparison against QwenCoder's good prompt:
 
 ```python
 from backend.approaches.vanna_rag import VannaApproach
@@ -239,13 +239,13 @@ print(prompts.sql_system("en")[:40])    # English system prompt from the YAML
 print(prompts.figure_system("fr")[:40]) # French figure prompt from the YAML
 ```
 
-## 6d. Small schema vs large schema — the ranking reversal
+## 6d. Small schema vs large schema : the ranking reversal
 
 The whole point of RAG is a schema too big to fit in a prompt. To *measure* it,
 build a **HEAVY** copy of the database: same tables, same key columns, same data,
 but each table padded with ~130 realistic **decoy** columns (audit / GDPR / legacy
-fields, all `NULL`). Only the **DDL size** the LLM sees changes — from ~7.5k to
-~132k characters (×18) — so the reference SQL still runs unchanged.
+fields, all `NULL`). Only the **DDL size** the LLM sees changes, from ~7.5k to
+~132k characters (×18), so the reference SQL still runs unchanged.
 
 ```bash
 python -m backend.widen_db                       # writes data/institut_wide.db
@@ -270,12 +270,12 @@ render_lightheavy(Path("eval/benchmark_light_sample.json"),
 ```
 
 On **LIGHT**, QwenCoder (whole schema in the prompt) leads; on **HEAVY**, the
-prompt overflows and the retrieval-based Vanna moves ahead — the reversal that
+prompt overflows and the retrieval-based Vanna moves ahead, the reversal that
 justifies RAG. See the "Small schema vs large schema" section of the README.
 
 ## 6e. Explore the data with skrub (companion EDA)
 
-A pedagogical profile of the hospital tables the LLM queries — `skrub.TableReport`
+A pedagogical profile of the hospital tables the LLM queries, `skrub.TableReport`
 gives types, missing values, cardinalities and distributions with zero plotting code.
 This is *not* part of the text2SQL pipeline (no sklearn model): it's a data-understanding
 aid.

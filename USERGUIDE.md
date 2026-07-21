@@ -1,6 +1,6 @@
 [🇫🇷](MODEDEMPLOI.md) · [🇬🇧](USERGUIDE.md)
 
-# User guide — Text2SQL Hospital
+# User guide : Text2SQL Hospital
 
 Illustrated, step-by-step tour of the web interface. For installation see
 [README.md](README.md); for command-line recipes see [EXAMPLES.md](EXAMPLES.md).
@@ -22,7 +22,7 @@ Illustrated, step-by-step tour of the web interface. For installation see
   three at once, for comparison).
 - **Clickable examples**: ready-made questions across every domain (medical, HR,
   accounting, pharmacy, equipment, research).
-- **Right column** — "Comment ça marche?": a reminder of what each approach does,
+- **Right column** : "Comment ça marche?": a reminder of what each approach does,
   and access to the database schema.
 
 ## 2. Dark theme
@@ -36,7 +36,7 @@ choice is remembered across visits.
 
 ![Schema](docs/screenshots/03-schema.png)
 
-Expand **"Schéma de la base (30 tables)"** to see the full DDL — this is *exactly*
+Expand **"Schéma de la base (30 tables)"** to see the full DDL, this is *exactly*
 the context the models receive to write SQL. Handy for understanding why a query
 joins one table or another.
 
@@ -49,7 +49,7 @@ joins one table or another.
 3. Each result shows, in order:
    - the **approach name**, the **model** used, and the **latency**;
    - a **teaching note** (what the approach does);
-   - the **generated SQL** (the heart of the demo — always visible);
+   - the **generated SQL** (the heart of the demo, always visible);
    - the **result table** (row count, preview).
 
 Local models take a few seconds (more on the very first call, while the model
@@ -73,7 +73,7 @@ explains *why* Gemma chose that visualization.
 
 Pick **`Toutes`** then **Exécuter**: all three approaches handle the same question
 and stack under one another. This is the ideal view to show colleagues **how each
-method writes SQL differently** — and to compare latencies and results.
+method writes SQL differently**, and to compare latencies and results.
 
 ---
 
@@ -82,7 +82,7 @@ method writes SQL differently** — and to compare latencies and results.
 - **An approach is greyed out / unavailable.** Its badge is red: the dependency
   is missing (`pip install ...`) or Ollama is down. QwenCoder needs no framework
   and works as soon as Ollama runs.
-- **"Erreur d'exécution" (execution error).** The generated SQL was invalid —
+- **"Erreur d'exécution" (execution error).** The generated SQL was invalid:
   which is instructive: you see what the model produced and why it failed the
   read-only guard.
 - **Nothing happens / very slow.** The first call loads the model; later calls

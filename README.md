@@ -1,4 +1,4 @@
-# text2SQL — Hospital 🏥
+# text2SQL : Hospital 🏥
 
 [🇫🇷](LISEZMOI.md) · [🇬🇧](README.md)
 
@@ -8,7 +8,7 @@
 > figure a model picks for you. Built to show colleagues who ask *"but concretely,
 > how does it actually work?"*.
 
-Everything runs locally through **[Ollama](https://ollama.com)** — no data leaves
+Everything runs locally through **[Ollama](https://ollama.com)** : no data leaves
 the machine, no API key, no cloud. With concurrency and multi users, I would
 prefer vLLM.
 
@@ -19,10 +19,10 @@ prefer vLLM.
 
 ---
 
-## Why this project exists — the pedagogical goal
+## Why this project exists : the pedagogical goal
 
 This repository is a **teaching artefact**, not a product. It was built to answer,
-concretely, a question colleagues keep asking: **"text-to-SQL — how does it
+concretely, a question colleagues keep asking: **"text-to-SQL, how does it
 actually work, and which way should we do it?"**
 
 Most tutorials show *one* library on a toy 2-table database and stop at "look, it
@@ -32,25 +32,25 @@ seeing them side by side*:
 
 1. **It makes the core idea impossible to miss.** The one thing that decides
    text-to-SQL quality is *how the database schema reaches the LLM*. So the three
-   approaches differ **only** on that axis — same database, same local model,
-   same execution guard — and show their generated SQL every time. You read the
+   approaches differ **only** on that axis, same database, same local model,
+   same execution guard, and show their generated SQL every time. You read the
    difference instead of being told about it: a hand-written prompt (**QwenCoder,
    raw**), a framework that does it for you (**LangChain**), and retrieval of just
    the relevant context (**Vanna, RAG**).
 2. **It runs for real on a believable database.** A 30-table, ~33k-row hospital
-   (medical, HR, accounting, equipment, pharmacy, clinical trials) — because
+   (medical, HR, accounting, equipment, pharmacy, clinical trials), because
    real questions and real joins are where naive text-to-SQL breaks, and a toy
    schema would hide exactly what students need to see.
 3. **It is honest about failure.** It *measures* accuracy (execution accuracy,
    like Spider/BIRD), ships an easy **and** a deliberately hard question set to
    expose the real ceiling, and it says plainly
-   what works and what doesn't. The lesson isn't "LLMs write SQL" — it's that the
+   what works and what doesn't. The lesson isn't "LLMs write SQL", it's that the
    hard part is guaranteeing the SQL answers the *right* question.
 4. **It shows the guardrails, not just the magic.** Read-only execution, why
    LLM-generated code is never `exec`'d, why Vanna's CVE matters, and how a model
    (**Gemma**) can pick a *chart* safely (a Vega-Lite spec, not executed code).
 5. **It is 100 % local (Ollama).** So the demo can be run, inspected, and modified
-   by anyone, with no API key, no cost, and no data leaving the machine — the
+   by anyone, with no API key, no cost, and no data leaving the machine, the
    whole point of a thing you learn *from* by taking it apart.
 
 In short: read the code and the docs top-to-bottom and you should come away
@@ -184,23 +184,23 @@ python -m eval.run_eval --approach vanna
 ```
 
 The **hard set** (`GOLDEN_HARD`: temporal grouping, HAVING, multi-joins, date
-functions) exists on purpose — a 100% score on easy questions proves little; the
+functions) exists on purpose, a 100% score on easy questions proves little; the
 `--hard` run shows where a local model actually breaks down.
 
 - **[DeepEval](https://github.com/confident-ai/deepeval)**: the execution-accuracy
-  metric is wrapped as a **fully local** `BaseMetric` (no OpenAI judge) —
+  metric is wrapped as a **fully local** `BaseMetric` (no OpenAI judge) -
   `eval/deepeval_metric.py`.
 - **[Giskard](https://github.com/Giskard-AI/giskard)**: **robustness** scan
-  (answer invariance under question perturbations) — `eval/giskard_scan.py`.
+  (answer invariance under question perturbations), `eval/giskard_scan.py`.
 
 ---
 
-## Benchmark — latency, speed and accuracy
+## Benchmark : latency, speed and accuracy
 
 > A numerical study comparing text2SQL approaches on a **balanced 768-query set**
 > of the fictional hospital (**256 easy / 256 medium / 256 hard**). Crucially:
 > **all five configurations share the SAME LLM** (`qwen2.5-coder`, locally via
-> Ollama), the same database and the same execution guard — so we compare
+> Ollama), the same database and the same execution guard, so we compare
 > **approaches** (how the context reaches the model), not different models.
 >
 > Reproducible: `python -m eval.benchmark --repeats 1 && python -m eval.bench_charts`.
@@ -208,20 +208,20 @@ functions) exists on purpose — a 100% score on easy questions proves little; t
 ### The five configurations compared
 
 Each engine keeps **one colour** across every figure (Vega + Mermaid) and this text,
-from the [harchaoui.org/warith/colors](https://harchaoui.org/warith/colors/) palette —
+from the [harchaoui.org/warith/colors](https://harchaoui.org/warith/colors/) palette -
 the colour carries the engine's meaning:
 
 | Engine | Colour | Meaning (palette) |
 |---|---|---|
 | 🟪 **QwenCoder (naive prompt)** | Purple `#AF52DE` | the bare "lazy" twin baseline |
-| 🟦 **QwenCoder (good prompt)** | Blue `#007AFF` | Trust / Reliable — we control everything |
-| 🟩 **LangChain** | Green `#28CD41` | Fresh / Growth — the popular toolbox |
-| 🟧 **Vanna 1** | Orange `#FF9500` | Friendly — under-fed RAG |
-| 🟥 **Vanna 2** | Red `#FF3B30` | Power / Strength — the nourished RAG |
+| 🟦 **QwenCoder (good prompt)** | Blue `#007AFF` | Trust / Reliable, we control everything |
+| 🟩 **LangChain** | Green `#28CD41` | Fresh / Growth, the popular toolbox |
+| 🟧 **Vanna 1** | Orange `#FF9500` | Friendly, under-fed RAG |
+| 🟥 **Vanna 2** | Red `#FF3B30` | Power / Strength, the nourished RAG |
 
 | Config | LLM | What changes |
 |---|---|---|
-| 🟪 **QwenCoder (naive prompt)** | qwen2.5-coder | **bare** schema, minimal instruction, **no** help — the "lazy" baseline |
+| 🟪 **QwenCoder (naive prompt)** | qwen2.5-coder | **bare** schema, minimal instruction, **no** help, the "lazy" baseline |
 | 🟦 **QwenCoder (good prompt)** | qwen2.5-coder | schema + **enumerated column values** + examples + **self-correction** on error |
 | 🟩 **LangChain** | qwen2.5-coder | the toolbox loads the schema and prompts the LLM its own way (no self-correction) |
 | 🟧 **Vanna 1** | qwen2.5-coder | lightly-trained RAG: DDL + a few docs + 4 examples + **self-correction** |
@@ -263,7 +263,7 @@ flowchart LR
 
 ### Methodology
 
-**Balanced 768-query set** — 256 per tier. A core of hand-written, verified
+**Balanced 768-query set** : 256 per tier. A core of hand-written, verified
 questions (joins, natural wording) + a large batch generated from safe patterns
 over the real schema (counts, groupings, aggregates, filters, joins, HAVING,
 anti-joins, dates). The reference SQL is correct by construction; **all** 768
@@ -276,7 +276,7 @@ path (the *useful* compute, immune to the machine's other activity).
 > ⚠️ Measured on a laptop under normal use: absolute values are *indicative*; the
 > **relative order** and the **gaps** are the signal (and they survive the noise).
 
-### The three difficulty tiers — what "Easy / Medium / Hard" actually mean
+### The three difficulty tiers : what "Easy / Medium / Hard" actually mean
 
 The point of splitting the set into three tiers is that **a single average hides
 where a model breaks**. A model can look great at 95 % overall and still be useless
@@ -286,14 +286,14 @@ SQL skill:
 | Tier | SQL skill it tests | Example question | Why it's that level |
 |---|---|---|---|
 | **Easy** | One table, one aggregate or filter. No join. | *"How many patients are there in total?"* → `SELECT COUNT(*) FROM patients` | The model only has to find **one** table and one column. If it fails here, it hasn't understood the schema at all. |
-| **Medium** | Sort / sum / average, `GROUP BY`, a filter on a value, grouping by month. Still mostly one table. | *"Monthly revenue collected in 2026"* → `GROUP BY strftime('%Y-%m', date)` + `SUM(...)` | The model must pick the right **aggregation** and the right **column to filter/group** — this is where the *enumerated values* start to matter (`statut = 'Payée'`, not `'Paid'`). |
-| **Hard** | Multi-table **joins**, `HAVING`, sub-queries, **anti-joins** (`NOT IN`), date functions, median thresholds. | *"Which departments have a payroll above the median?"* (join `employes`→`services` + `HAVING SUM(salaire) > median)`; *"patients with no invoice"* (`NOT IN` anti-join) | The model must **navigate foreign keys**, keep the right grain, and combine several clauses. This is where local models — and generic prompts — actually fall apart, and where the ranking becomes meaningful. |
+| **Medium** | Sort / sum / average, `GROUP BY`, a filter on a value, grouping by month. Still mostly one table. | *"Monthly revenue collected in 2026"* → `GROUP BY strftime('%Y-%m', date)` + `SUM(...)` | The model must pick the right **aggregation** and the right **column to filter/group** : this is where the *enumerated values* start to matter (`statut = 'Payée'`, not `'Paid'`). |
+| **Hard** | Multi-table **joins**, `HAVING`, sub-queries, **anti-joins** (`NOT IN`), date functions, median thresholds. | *"Which departments have a payroll above the median?"* (join `employes`→`services` + `HAVING SUM(salaire) > median)`; *"patients with no invoice"* (`NOT IN` anti-join) | The model must **navigate foreign keys**, keep the right grain, and combine several clauses. This is where local models (and generic prompts) actually fall apart, and where the ranking becomes meaningful. |
 
 So read the tiers as a **difficulty ramp**: everyone scores high on Easy; the gaps
 open on Medium (values) and blow open on Hard (joins + logic). A method is only as
 good as its **Hard** column.
 
-### Results — summary table
+### Results : summary table
 
 768 queries, one generation each (`--repeats 1`), same LLM everywhere.
 
@@ -308,23 +308,23 @@ good as its **Hard** column.
 **Read it honestly.** The two QwenCoder configs lead overall (~90.5 %), then **Vanna
 2 (88.3 %)**, **Vanna 1 (86.1 %)** and LangChain (84.0 %). Two things matter more
 than that headline. First, the **hard** column: on the queries that actually
-separate methods, **Vanna 2 is now the best of all (81 %)** — a well-fed RAG's
+separate methods, **Vanna 2 is now the best of all (81 %)** : a well-fed RAG's
 targeted retrieval pays off exactly where joins and logic get hard. Second, giving
 Vanna the same **self-correction** as the good prompt (see below) is what closed the
-gap — but it made Vanna the **slowest** (6 s median). LangChain stays the fastest and
+gap, but it made Vanna the **slowest** (6 s median). LangChain stays the fastest and
 the least reliable (67 % on hard, 103 silent errors). **Quality and speed pull in
 opposite directions, and no single config wins both.**
 
 ### A good prompt matters: good prompt vs naive prompt
 
-Same model, same 768 questions — only the prompt changes. The **overall** accuracy
+Same model, same 768 questions, only the prompt changes. The **overall** accuracy
 gap is tiny (**90.6 % vs 90.5 %**), and that surprised us. It deserves an honest
 explanation rather than a marketing claim.
 
-**Why the overall gap is small here — a property of the benchmark, not of prompts.**
+**Why the overall gap is small here, a property of the benchmark, not of prompts.**
 Most of the generated questions *spell out the exact filter value* ("…whose `statut`
-equals « Impayée »"). The single biggest thing a good prompt injects — the
-**enumerated column values**, so the model knows `unpaid → 'Impayée'` — is therefore
+equals « Impayée »"). The single biggest thing a good prompt injects, the
+**enumerated column values**, so the model knows `unpaid → 'Impayée'` : is therefore
 *already given away by the question*. On **natural** questions where the value is
 *not* spelled out ("how many invoices are **unpaid**?", see `eval/run_eval` and the
 live demo), the good prompt's lead is much larger. **Lesson: how you write the
@@ -342,25 +342,25 @@ prompt still buys, visibly, even here: **execution errors more than halved (8 vs
 
 **"Useful" compute time (QwenCoder).** Ollama's own timers show the good prompt runs
 at **13.1 tokens/s** (median compute 2.67 s) vs the naive prompt's **22.0 tokens/s**
-(1.63 s) — ~60 % of the token speed and ~1 s more compute per query. Two reasons: a
+(1.63 s), ~60 % of the token speed and ~1 s more compute per query. Two reasons: a
 far larger context (full schema + enumerated values + examples), and self-correction
 firing a *second* generation on failure. **That is the price of reliability.**
 
-### Error analysis — to do better
+### Error analysis : to do better
 
-A wrong answer is not just "wrong" — **how** it is wrong changes everything. We
+A wrong answer is not just "wrong", **how** it is wrong changes everything. We
 split every failure into two fundamentally different kinds:
 
-- 🔴 **Execution error** — the generated SQL is **invalid**: a wrong column name, a
+- 🔴 **Execution error** : the generated SQL is **invalid**: a wrong column name, a
   bad join, a syntax slip. The database **refuses** it and returns an error. This is
   the *good* kind of failure: it is **loud**. You see it immediately, you can log it,
   retry it, or fall back. Nobody is misled. Self-correction (re-prompting the model
   with the database's error message) fixes most of these automatically.
-- 🟡 **Semantic error** — the SQL is **perfectly valid and runs**, but it answers the
+- 🟡 **Semantic error** : the SQL is **perfectly valid and runs**, but it answers the
   **wrong question**: it filtered `statut = 'En attente'` when you asked for
   *unpaid* (`'Impayée'`), or summed the wrong column, or missed a join condition. The
   database returns a **plausible-looking table of numbers** with no warning at all.
-  This is the **dangerous** kind — the *silent killer*. A human copies the number
+  This is the **dangerous** kind, the *silent killer*. A human copies the number
   into a report and nobody ever notices it was wrong.
 
 **The whole game of production text-to-SQL is turning semantic errors into execution
@@ -371,7 +371,7 @@ headline accuracy: two methods can score the same overall yet be worlds apart in
 
 ![Anatomy of errors, per approach](docs/img/en/bench-errors.png)
 
-The chart above is normalized per approach — 🟢 green is correct, 🔴 red is an
+The chart above is normalized per approach, 🟢 green is correct, 🔴 red is an
 execution error (loud, catchable), 🟡 yellow is a semantic error (silent, dangerous).
 **The less yellow, the more you can trust the answer without checking it by hand.**
 
@@ -383,13 +383,13 @@ execution error (loud, catchable), 🟡 yellow is a semantic error (silent, dang
 | 🟧 Vanna 1 | 13 | 94 | 107 |
 | 🟥 Vanna 2 | **8** | 82 | 90 |
 
-1. **Self-correction crushes execution errors** — the two configs with a repair loop
+1. **Self-correction crushes execution errors** : the two configs with a repair loop
    (good QwenCoder and Vanna 2) sit at just **8** invalid-SQL failures each. Adding
    that same loop to Vanna is what pulled it up: Vanna 1's exec errors fell **31 →
-   13** and Vanna 2's **46 → 8** versus the no-repair versions — worth **+2 to +3
+   13** and Vanna 2's **46 → 8** versus the no-repair versions, worth **+2 to +3
    points** of accuracy, for free.
 2. **Feeding the values still shows up in the *silent* column.** Vanna 2 has fewer
-   semantic errors than Vanna 1 (82 vs 94) *and* far fewer execution errors — the
+   semantic errors than Vanna 1 (82 vs 94) *and* far fewer execution errors, the
    enumerated values steer it toward the right filter, the repair loop catches the
    rest. That combination is why Vanna 2 (88.3 %) clears Vanna 1 (86.1 %) and wins
    the hard tier outright.
@@ -397,17 +397,17 @@ execution error (loud, catchable), 🟡 yellow is a semantic error (silent, dang
    repair loop. Its generic prompt never injects enumerated values. **Speed is not
    safety.**
 
-### Small schema vs large schema — the reversal
+### Small schema vs large schema : the reversal
 
-Everything above runs on the **LIGHT** database (`institut.db`, 30 tables, DDL ~7.5k characters —
+Everything above runs on the **LIGHT** database (`institut.db`, 30 tables, DDL ~7.5k characters -
 it *fits* inside the prompt). What happens when the schema no longer fits? `institut_wide.db`
 keeps the **same tables and key columns** and pads each with ~130 decoy columns → DDL ~132k
 characters (**×18**). The reference SQL still runs (key columns intact); only the *size the model
 sees* changes.
 
 We re-ran a **balanced 24-question sample** (8 easy / 8 medium / 8 hard, the *same* questions on
-both databases) across the five configs. This is a **small, indicative sample** — not the
-768-query study above — so read the *direction*, not the third decimal:
+both databases) across the five configs. This is a **small, indicative sample** : not the
+768-query study above, so read the *direction*, not the third decimal:
 
 | Config | Small schema | Large schema | Δ accuracy | Latency (small → large) |
 |---|---:|---:|---:|---|
@@ -417,43 +417,43 @@ both databases) across the five configs. This is a **small, indicative sample** 
 | 🟧 Vanna 1 (RAG) | 75 % | 75 % | **0** | 7.9 s → 26.9 s |
 | 🟥 **Vanna 2 (RAG)** | 83 % | **92 %** | **+8** | 7.9 s → 40.7 s |
 
-![Small vs large schema — accuracy](docs/img/en/bench-light-vs-heavy-accuracy.png)
+![Small vs large schema, accuracy](docs/img/en/bench-light-vs-heavy-accuracy.png)
 
-![Small vs large schema — latency](docs/img/en/bench-light-vs-heavy-latency.png)
+![Small vs large schema, latency](docs/img/en/bench-light-vs-heavy-latency.png)
 
-**What the numbers say.** The three **prompt-based** configs — which paste the *whole* schema into
-the prompt — degrade when the DDL overflows the context: the good QwenCoder prompt falls **92 % →
+**What the numbers say.** The three **prompt-based** configs, which paste the *whole* schema into
+the prompt, degrade when the DDL overflows the context: the good QwenCoder prompt falls **92 % →
 46 %** and its latency explodes **~25×** (2 s → 51 s). The two **RAG** configs (Vanna), which
 *retrieve only the relevant tables*, **hold** their accuracy (Vanna 1 flat at 75 %, Vanna 2 rising
 to 92 %) and stay **faster** than the prompt-stuffers on the large schema.
 
 So on the large schema the ranking **flips**: the whole-schema prompt that *led* on the small
 database (92 %) is now near-last (46 %), and the well-fed RAG (Vanna 2) leads (92 %). This is
-exactly the mechanism [`PROS_CONS.md`](PROS_CONS.md) describes — now **measured**, not asserted.
+exactly the mechanism [`PROS_CONS.md`](PROS_CONS.md) describes, now **measured**, not asserted.
 Honest caveat: it is a 24-question sample; the *direction* is unambiguous, the exact points are not.
 
 ### Takeaways & limits
 
 1. **Same model, different context → different reliability.** All five run
    `qwen2.5-coder`; the ~7-point spread is bought entirely by *what you put in the
-   context* — not by a better model. That is the whole thesis.
-2. **The good prompt wins on the tails and the error profile, not the average** —
+   context*, not by a better model. That is the whole thesis.
+2. **The good prompt wins on the tails and the error profile, not the average**:
    here it ties the naive prompt because the templated questions hand it the exact
    values. On natural questions it separates much more.
 3. **Give a RAG the same weapons and it nearly catches up.** Adding self-correction
    and enumerated values to Vanna lifted it **84.2 → 86.1 %** (Vanna 1) and **85.4 →
    88.3 %** (Vanna 2). **On the hard tier Vanna 2 (81 %) is now the single best
-   config** — retrieval of the *right* worked example is worth most exactly when the
+   config**, retrieval of the *right* worked example is worth most exactly when the
    query is complex.
 4. **But full context still edges out retrieval overall on a small schema.** Even in
    a fair fight (both self-correct), QwenCoder's whole-schema prompt (90.6 %) stays
    ahead of Vanna 2 (88.3 %) on easy/medium. But on a database whose schema *cannot* fit a
-   prompt the ranking flips and RAG becomes necessary — **now measured** just above
+   prompt the ranking flips and RAG becomes necessary, **now measured** just above
    (*Small schema vs large schema*): the good prompt falls **92 % → 46 %** while Vanna 2 rises
    **83 % → 92 %** when the DDL is inflated ×18.
 5. **Speed ≠ safety, and quality has a price.** LangChain is fastest and least safe
    (103 silent errors, 67 % on hard). Vanna 2 is the most accurate on hard but the
-   **slowest** (6 s median) — self-correction fires a second generation on every
+   **slowest** (6 s median), self-correction fires a second generation on every
    failure. No config wins both axes.
 6. **Honest limitation:** templated questions that cite the exact filter value
    *understate* the value of good context. The gaps here are a **lower bound** on
@@ -572,7 +572,7 @@ The web UI targets **WCAG 2.1 AA**, verified with the project's front-end toolin
 ## Notes
 
 - This repository follows a strict **coding standard** (numpy docstrings, typing,
-  generous comments, tests, eval, Ruff/PEP 8) — see `CODING.md`.
+  generous comments, tests, eval, Ruff/PEP 8), see `CODING.md`.
 - The Ollama client has been copy-pasted from the author's local
   [`roitelet`](https://github.com/warith-harchaoui/roitelet) framework.
 

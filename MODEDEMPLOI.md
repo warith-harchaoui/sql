@@ -1,6 +1,6 @@
 [🇫🇷](MODEDEMPLOI.md) · [🇬🇧](USERGUIDE.md)
 
-# Mode d'emploi — Text2SQL Hôpital
+# Mode d'emploi : Text2SQL Hôpital
 
 Guide pas-à-pas illustré de l'interface web. Pour l'installation, voir
 [LISEZMOI.md](LISEZMOI.md) ; pour les recettes en ligne de commande,
@@ -24,7 +24,7 @@ Guide pas-à-pas illustré de l'interface web. Pour l'installation, voir
   (pour comparer les trois d'un coup).
 - **Exemples à cliquer** : des questions prêtes à l'emploi, couvrant tous les
   domaines (médical, RH, compta, pharmacie, matériel, recherche).
-- **Colonne de droite** — « Comment ça marche ? » : un rappel de ce que fait
+- **Colonne de droite** : « Comment ça marche ? » : un rappel de ce que fait
   chaque approche, et l'accès au schéma de la base.
 
 ## 2. Thème sombre
@@ -38,7 +38,7 @@ Le choix est mémorisé pour vos prochaines visites.
 
 ![Schéma](docs/screenshots/03-schema.png)
 
-Dépliez **« Schéma de la base (30 tables) »** pour voir le DDL complet — c'est
+Dépliez **« Schéma de la base (30 tables) »** pour voir le DDL complet, c'est
 *exactement* le contexte que reçoivent les modèles pour écrire le SQL. Utile pour
 comprendre pourquoi une requête joint telle ou telle table.
 
@@ -52,7 +52,7 @@ comprendre pourquoi une requête joint telle ou telle table.
 3. Chaque résultat affiche, dans l'ordre :
    - le **nom de l'approche**, le **modèle** utilisé et la **latence** ;
    - une **note pédagogique** (ce que fait l'approche) ;
-   - le **SQL généré** (le cœur de la démo — toujours visible) ;
+   - le **SQL généré** (le cœur de la démo, toujours visible) ;
    - le **tableau des résultats** (nombre de lignes, aperçu).
 
 Les modèles locaux prennent quelques secondes (davantage au tout premier appel,
@@ -77,7 +77,7 @@ visualisation.
 
 Choisissez **`Toutes`** puis **Exécuter** : les trois approches traitent la même
 question et s'affichent l'une sous l'autre. C'est la vue idéale pour montrer à
-des collègues **comment chaque méthode écrit le SQL différemment** — et comparer
+des collègues **comment chaque méthode écrit le SQL différemment** : et comparer
 latences et résultats.
 
 ---
@@ -87,7 +87,7 @@ latences et résultats.
 - **Une approche est grisée / indisponible.** Son badge est rouge : la
   dépendance manque (`pip install ...`) ou Ollama est éteint. QwenCoder ne
   dépend d'aucun framework et marche dès qu'Ollama tourne.
-- **« Erreur d'exécution ».** Le SQL généré était invalide — c'est instructif :
+- **« Erreur d'exécution ».** Le SQL généré était invalide, c'est instructif :
   on voit ce que le modèle a produit et pourquoi ça n'a pas passé le garde-fou
   lecture seule.
 - **Rien ne se passe / très lent.** Premier appel = chargement du modèle. Les
